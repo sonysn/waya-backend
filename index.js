@@ -1,6 +1,7 @@
 const express = require('express');
 var mysql = require('mysql');
 const bodyParser = require('body-parser');
+const expressValidator = require('express-validator');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -27,12 +28,15 @@ app.listen(port, () => {
 })
 
 //bring in routes
-const authRoutes = require('./routes/auth');
+const userAuthRoutes = require('./routes/userAuth');
+const userDriverAuthRoutes = require('./routes/userDriverAuth');
 
 //middleware
-app.use(morgan('dev'))
-app.use(bodyParser.json())
-app.use('/', authRoutes);
+app.use(morgan('dev'));
+app.use(bodyParser.json());
+app.use(expressValidator());
+app.use('/', userAuthRoutes);
+app.use('/', userDriverAuthRoutes);
 
 // const addUsers = async (req, res) => {
 //     //to be requested from user
