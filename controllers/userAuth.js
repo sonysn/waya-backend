@@ -1,7 +1,7 @@
 const { MySQLConnection } = require('../index');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-hss = '$2b$10$W9vsPnWD/fo6EbJDf/Ocxub9riwVBSHJ.1YR4WlEnVzebyr5FdI42'
+//hss = '$2b$10$W9vsPnWD/fo6EbJDf/Ocxub9riwVBSHJ.1YR4WlEnVzebyr5FdI42'
 
 
 
@@ -13,17 +13,18 @@ exports.validateSignUp = async (req, res, next) => {
     //to be requested from user
     const { firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID } = req.body;
 
-    //check if user with email exists
-    const SQLCOMMAND1 = `SELECT * FROM users WHERE email = ?;`
-    await MySQLConnection.query(SQLCOMMAND1, [email], (err, result) => {
+    //check if user with phone number exists
+    // const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER = ?;`
+    const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    await MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
 
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
             if (result.length) {
-                console.log("User with that email exists.");
-                res.status(200).json({ status: 200, message: "User with that email exists." });
+                console.log("User with that phone number or email exists.");
+                res.status(200).json({ status: 200, message: "User with that phone number or email exists." });
             } else {
                 console.log("User not found.");
                 //res.status(404).send({ status: 404, message: "User not found." });
@@ -48,7 +49,7 @@ exports.signup = async (req, res) => {
 
             var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
             //sql command to db
-            await MySQLConnection.query(SQLCOMMAND, data, (err, results) => {
+            await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
                 //if (err) throw err;
                 return res.json({ message: "Signup success!" });
             });
@@ -84,17 +85,21 @@ exports.signin = async (req, res) => {
     const { phoneNumber, email, password } = req.body;
 
     const SQLCOMMAND = `SELECT PASSWORD FROM users where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
-    await MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
+    const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, results) => {
         //res.json(result[0].PASSWORD);
         //console.log(password)
-        bcrypt.compare(password, result[0].PASSWORD, function(err, result){
+        bcrypt.compare(password, results[0].PASSWORD, function (err, result) {
             // console.log(result);
             //res.json(result);
             if (result) {
-                res.json({ message: "Logged In"});
+                MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
+                    res.json({result, message: "Logged In"});
+                 });
+                //res.json({ message: "Logged In" });
             } else {
-                res.json({ message: "Wrong password"})
+                res.json({ message: "Wrong password!" });
             }
-     })
+        });
     })
 }

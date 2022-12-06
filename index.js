@@ -30,6 +30,7 @@ app.listen(port, () => {
 //bring in routes
 const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
+const userDriverActionsRoutes = require('./routes/userDriverActions');
 
 //middleware
 app.use(morgan('dev'));
@@ -37,6 +38,7 @@ app.use(bodyParser.json());
 app.use(expressValidator());
 app.use('/', userAuthRoutes);
 app.use('/', userDriverAuthRoutes);
+app.use('/', userDriverActionsRoutes);
 
 // const addUsers = async (req, res) => {
 //     //to be requested from user
