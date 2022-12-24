@@ -23,14 +23,44 @@ MySQLConnection.connect(function (err) {
 
 const port = process.env.PORT || 3000;
 
-app.listen(port, () => {
+const httpServer = app.listen(port, () => {
     console.log(`A Node JS API is listening on port: ${port}`)
 })
+
+const { Server } = require("socket.io");
+//export this
+exports.io = io = new Server(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+    },
+  });
+
+  io.on("connection", (client) =>{
+    console.log('client connected...', client.id);
+    
+
+    //whenever someone disconnects this gets executed, handle disconnect
+    client.on('disconnect', function() {
+    console.log("disconnected");
+  });
+
+  client.on('location', function(data) {
+    console.log(data);
+    io.emit('location', data);
+  });
+
+  client.on('error', function (err) {
+    console.log('received error from client:', client.id)
+    console.log(err)
+  })
+});
 
 //bring in routes
 const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
 const userDriverActionsRoutes = require('./routes/userDriverActions');
+const requestRideRoutes = require('./routes/requestRide');
 
 //middleware
 app.use(morgan('dev'));
@@ -39,6 +69,7 @@ app.use(expressValidator());
 app.use('/', userAuthRoutes);
 app.use('/', userDriverAuthRoutes);
 app.use('/', userDriverActionsRoutes);
+app.use('/', requestRideRoutes);
 
 // const addUsers = async (req, res) => {
 //     //to be requested from user
