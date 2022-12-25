@@ -28,3 +28,23 @@ exports.getDriverCars = async (req, res) => {
         return res.json({ result })
     });
 }
+
+//verify tokens from headers
+exports.ensureToken = async (req, res, next) => {
+    const bearerHeader = req.headers["authorization"]
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(" ");
+        const bearerToken = bearer[1];
+        req.token = bearerToken;
+        jsonwebtoken.verify(req.token, process.env.JWT_SECRET, function(err){
+            if(err){
+                res.sendStatus(403);
+            } else {
+                next();
+            }
+        });
+        //next();
+    } else {
+        res.sendStatus(403);
+    }
+}

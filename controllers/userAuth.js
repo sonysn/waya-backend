@@ -1,14 +1,8 @@
 const { MySQLConnection } = require('../index');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
-const saltRounds = 10;
+//const saltRounds = 10;
 //hss = '$2b$10$W9vsPnWD/fo6EbJDf/Ocxub9riwVBSHJ.1YR4WlEnVzebyr5FdI42'
-
-
-
-// bcrypt.compare(pass, hss, function(err, result){
-//     console.log(result)
-// })
 
 exports.validateSignUp = async (req, res, next) => {
     //to be requested from user
@@ -44,7 +38,7 @@ exports.signup = async (req, res) => {
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`
     //hash user password
 
-    bcrypt.genSalt(saltRounds, function (err, salt) {
+    bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt) {
         bcrypt.hash(password, salt, async function (err, hash) {
             console.log(hash);
 
@@ -85,24 +79,21 @@ exports.ValidateSignin = async (req, res, next) => {
 exports.signin = async (req, res) => {
     const { phoneNumber, email, password } = req.body;
 
-    //authenticate:: look i dont know how to use THIS YET
-    //const token = jsonwebtoken.sign({ user: "rider" }, process.env.JWT_SECRET);
-
     const SQLCOMMAND = `SELECT PASSWORD FROM users where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
     const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
     MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, results) => {
-        //res.json(result[0].PASSWORD);
-        //console.log(results[0])
+        //this compares the password of user based on the hashing bcrypt
         bcrypt.compare(password, results[0].PASSWORD, function (err, result) {
             //console.log(results);
             //res.json(result);
             if (result) {
                 MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
-                    console.log(result)
-                    //const token = jsonwebtoken.sign(result[0].ID, process.env.JWT_SECRET)
+                    //console.log(result[0].PHONE_NUMBER + result[0].ID)
+                    const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
+                    //this signs the token for route authorization
+                    const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
                     res.json({ token, result, message: "Logged In" });
                 });
-                //res.json({ message: "Logged In" });
             } else {
                 res.json({ message: "Wrong password!" });
             }

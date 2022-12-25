@@ -1,9 +1,9 @@
 const express = require('express');
-const { addCar, getDriverCars } = require('../controllers/userDriverAction');
+const { addCar, getDriverCars, ensureToken } = require('../controllers/userDriverAction');
 
 const router = express.Router();
 
 router.post('/newdrivercar', addCar);
-router.get('/:driver/getdrivercars', getDriverCars);
+router.get('/:driver/getdrivercars',  ensureToken, getDriverCars);
 
 module.exports = router;

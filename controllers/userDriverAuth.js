@@ -1,6 +1,6 @@
 const { MySQLConnection } = require('../index');
 const bcrypt = require('bcrypt');
-const saltRounds = 10;
+//const saltRounds = 10;
 
 exports.validateSignUp = async (req, res, next) => {
     //to be requested from user
@@ -15,8 +15,8 @@ exports.validateSignUp = async (req, res, next) => {
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
             if (result.length) {
-                console.log("User with that Phone number exists.");
-                res.status(200).json({ status: 200, message: "User with that Phone number exists." });
+                console.log("User with that phone number or email exists.");
+                res.status(200).json({ status: 200, message: "User with that phone number or email exists." });
             } else {
                 console.log("User not found.");
                 //res.status(404).send({ status: 404, message: "User not found." });
@@ -35,7 +35,7 @@ exports.signup = async (req, res) => {
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     //hash user password
 
-    bcrypt.genSalt(saltRounds, function (err, salt){
+    bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt){
         bcrypt.hash(password, salt, async function(err, hash){
             console.log(hash);
 
@@ -86,7 +86,10 @@ exports.signin = async (req, res) => {
             //res.json(result);
             if (result) {
                 MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
-                    res.json({result, message: "Logged In"});
+                    const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
+                    //this signs the token for route authorization
+                    const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
+                    res.json({ token, result, message: "Logged In" });
                  });
                 //res.json({ message: "Logged In"});
             } else {

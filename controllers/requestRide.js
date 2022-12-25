@@ -1,4 +1,5 @@
 const { MySQLConnection } = require('../index');
+const jsonwebtoken = require('jsonwebtoken');
 
 exports.requestRide = async (req, res) => {
     const { userId, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
@@ -29,4 +30,24 @@ exports.getTripsHistory = async (req, res) => {
     await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
         res.json({ result });
     });
+}
+
+//verify tokens from headers
+exports.ensureToken = async (req, res, next) => {
+    const bearerHeader = req.headers["authorization"]
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(" ");
+        const bearerToken = bearer[1];
+        req.token = bearerToken;
+        jsonwebtoken.verify(req.token, process.env.JWT_SECRET, function(err){
+            if(err){
+                res.sendStatus(403);
+            } else {
+                next();
+            }
+        });
+        //next();
+    } else {
+        res.sendStatus(403);
+    }
 }
