@@ -1,4 +1,4 @@
-const { MySQLConnection } = require('../index');
+const { MySQLConnection, io } = require('../index');
 const jsonwebtoken = require('jsonwebtoken');
 
 exports.requestRide = async (req, res) => {
@@ -7,6 +7,7 @@ exports.requestRide = async (req, res) => {
 
     //get todays date and parse it for sql db
     const today = new Date();
+    //month goes from 0 to 11
     var month = today.getMonth() + 1;
     requestDate = today.getFullYear() + '-' + month + '-' + today.getDate();
 

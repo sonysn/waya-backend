@@ -48,3 +48,13 @@ exports.ensureToken = async (req, res, next) => {
         res.sendStatus(403);
     }
 }
+
+exports.locationUpdate = async (req, res) => {
+    const { locationPoint } = req.body;
+    const driver_ID = req.params.driverID;
+
+    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = ? WHERE ID LIKE ?;`
+    await MySQLConnection.query(SQLCOMMAND, [locationPoint, driver_ID], (err, result) => {
+        return res.sendStatus(200);
+    })
+}

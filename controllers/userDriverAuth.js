@@ -1,5 +1,6 @@
 const { MySQLConnection } = require('../index');
 const bcrypt = require('bcrypt');
+const jsonwebtoken = require('jsonwebtoken');
 //const saltRounds = 10;
 
 exports.validateSignUp = async (req, res, next) => {

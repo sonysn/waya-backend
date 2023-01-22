@@ -37,8 +37,11 @@ exports.io = io = new Server(httpServer, {
   });
 
   io.on("connection", (client) =>{
+    // username = 'lola';
+    // client.id = username;
     console.log('client connected...', client.id);
     
+    //emit is to send, on is to listen
 
     //whenever someone disconnects this gets executed, handle disconnect
     client.on('disconnect', function() {
