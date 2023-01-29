@@ -94,7 +94,7 @@ exports.signin = async (req, res) => {
                  });
                 //res.json({ message: "Logged In"});
             } else {
-                res.json({ message: "Wrong password"})
+                res.status(401).send({ message: "Wrong password or Email"})
             }
      })
     })

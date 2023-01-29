@@ -1,5 +1,3 @@
-const { MySQLConnection } = require('../index');
-
 
 exports.addCar = async (req, res) =>  {
     // //get user_id for driver in headers
@@ -53,8 +51,31 @@ exports.locationUpdate = async (req, res) => {
     const { locationPoint } = req.body;
     const driver_ID = req.params.driverID;
 
-    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = ? WHERE ID LIKE ?;`
-    await MySQLConnection.query(SQLCOMMAND, [locationPoint, driver_ID], (err, result) => {
+    //not escaping this due to the POINT requirements
+    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
+    await MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
         return res.sendStatus(200);
     })
+}
+
+exports.availability = async (req, res) => {
+    const { availabilityStatus, driverID } = req.body;
+    SQLCOMMAND = `UPDATE driver SET AVAILABILITY = ${availabilityStatus} WHERE ID LIKE ?;`
+    await MySQLConnection.query(SQLCOMMAND, [driverID], (err, result) => {
+        return res.sendStatus(200);
+    });
+}
+
+//WEBSOCKET REQUEST BELOW HERE
+
+//websocket location update
+exports.locationUpdateWT = (locationPoint, driver_ID) => {
+    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
+    MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
+        console.log('driver location update success!');
+    })
+}
+
+exports.notifyDriver = (driverSocket) => {
+    io.broadcast.to(driverSocket).emit('ridenotification', data);
 }

@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const expressValidator = require('express-validator');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const { sockets } = require('./sockets');
 dotenv.config();
 
 const app = express();
@@ -18,7 +19,7 @@ exports.MySQLConnection = MySQLConnection = mysql.createConnection({
 
 MySQLConnection.connect(function (err) {
     if (err) throw err;
-    console.log("Connected!");
+    console.log("MYSQL DB Connected!");
 });
 
 const port = process.env.PORT || 3000;
@@ -36,36 +37,38 @@ exports.io = io = new Server(httpServer, {
     },
   });
 
-  io.on("connection", (client) =>{
-    // username = 'lola';
-    // client.id = username;
-    console.log('client connected...', client.id);
+//   io.on("connection", (socket) =>{
+//     var drivers;
+//     // username = 'lola';
+//     // client.id = username;
+//     console.log('client connected...', socket.id);
     
-    //emit is to send, on is to listen
+//     //emit is to send, on is to listen
 
-    //whenever someone disconnects this gets executed, handle disconnect
-    client.on('disconnect', function() {
-    console.log("disconnected");
-  });
+//     //whenever someone disconnects this gets executed, handle disconnect
+//     socket.on('disconnect', function() {
+//     console.log("disconnected");
+//   });
 
-  client.on('location', function(data) {
-    console.log(data);
-    io.emit('location', data);
-  });
+//   socket.on('driverLocation', function(data) {
+//     console.log(data)
+//     io.emit('driverLocation', data);
+//   });
 
-  client.on('error', function (err) {
-    console.log('received error from client:', client.id)
-    console.log(err)
-  })
-});
+//   socket.on('error', function (err) {
+//     console.log('received error from client:', client.id)
+//     console.log(err)
+//   })
+// });
 
 //bring in routes
 const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
-const userDriverActionsRoutes = require('./routes/userDriverActions');
-const requestRideRoutes = require('./routes/requestRide');
+const userDriverActionsRoutes = require('./routes/userDriverActions/userDriverActions');
+const requestRideRoutes = require('./routes/userActions/requestRide');
 
 //middleware
+app.set(sockets());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(expressValidator());
