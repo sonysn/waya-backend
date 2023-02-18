@@ -98,6 +98,3 @@ app.get('/', (req, res) => {
 })
 
 //app.post('/adduser', addUsers);
-
-// Export the Express API
-module.exports = app;
