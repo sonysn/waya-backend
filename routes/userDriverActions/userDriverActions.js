@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.post('/newdrivercar', addCar);
 router.get('/:driver/getdrivercars',  ensureToken, getDriverCars);
+//not being used 
 router.post('/:driverID/updatecurrentlocation', locationUpdate);
 router.post('/availability', availability);
 

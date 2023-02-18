@@ -16,14 +16,16 @@ exports.addCar = async (req, res) =>  {
 
 exports.getDriverCars = async (req, res) => {
 
-    const driver_ID = req.params.driver;
+    const driverID = req.params.driver;
+    const delay = time => new Promise(res=>setTimeout(res,time));
 
     SQLCOMMAND = `SELECT driver.FIRST_NAME, driver.LAST_NAME, driver.PHONE_NUMBER, driver.EMAIL, driver_cars.MODEL, driver_cars.MAKE, 
     driver_cars.PLATE_NUMBER, driver_cars.COLOUR
     FROM driver
     JOIN driver_cars ON driver_cars.DRIVER_ID = driver.ID WHERE driver.ID = ?;`
 
-    await MySQLConnection.query(SQLCOMMAND, driver_ID, (err, result) => {
+    await MySQLConnection.query(SQLCOMMAND, driverID, async (err, result) => {
+        //await delay(1500);
         return res.json({ result })
     });
 }

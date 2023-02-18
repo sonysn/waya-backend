@@ -2,6 +2,7 @@ const { MySQLConnection } = require('../index');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
 //const saltRounds = 10;
+const delay = time => new Promise(res=>setTimeout(res,time));
 
 exports.validateSignUp = async (req, res, next) => {
     //to be requested from user
@@ -57,12 +58,13 @@ exports.ValidateSignin = async(req, res, next) => {
 
     const SQLCOMMAND = `SELECT * FROM driver where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     var data = [phoneNumber, email, password];
-    await MySQLConnection.query(SQLCOMMAND, data, (err, result) =>{
+    await MySQLConnection.query(SQLCOMMAND, data, async(err, result) =>{
+        await delay(500)
         
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
-        } if (result.length) {
+        } else if (result.length) {
             console.log("User with that email exists.");
             //res.status(200).json({ status: 200, message: "User with that email exists." });
             next();
