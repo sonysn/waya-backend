@@ -10,14 +10,14 @@ dotenv.config();
 const app = express();
 
 //exporting this for various purposes
-exports.MySQLConnection = MySQLConnection = mysql.createConnection({
+exports.MySQLConnection = MySQLConnection = mysql.createPool({
     host: process.env.HOST,
     user: process.env.USER,
     password: process.env.PASSWORD,
     database: process.env.DATABASE
 });
 
-MySQLConnection.connect(function (err) {
+MySQLConnection.getConnection(function (err) {
     if (err) throw err;
     console.log("MYSQL DB Connected!");
 });
