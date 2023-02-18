@@ -55,10 +55,13 @@ exports.ensureToken = async (req, res, next) => {
 }
 
 exports.DriverFound = DriverFound = [];
+exports.reqBody = reqBody = [];
 //http request
 exports.searchForDrivers = async (req, res) => {
 
-    const { pickupLocationPosition } = req.body;
+    const { userId, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
+        dropoffLocationPostion, status } = req.body;
+
 
     SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING FROM (
         SELECT *, ST_Distance_Sphere(
@@ -67,7 +70,7 @@ exports.searchForDrivers = async (req, res) => {
     ) as distance FROM driver WHERE AVAILABILITY = true
     ) AS LOCATION WHERE distance < 10000`;
 
-    await MySQLConnection.query(SQLCOMMAND, (err, result) => {
+    await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
         if (err) {
             console.log(err);
             res.status(500).json("Internal server error");
@@ -75,8 +78,21 @@ exports.searchForDrivers = async (req, res) => {
             res.json("No drivers available");
             //res.json({ result });
         } else {
-            io.emit('driversAvailable', result);
-            getDriver(result);
+            //await reqBody.push(req.body);
+            //await getDriver(result);
+            const who = 'Driver';
+            //console.log(JSON.stringify(data[0]['ID']));
+            const driverid = who + JSON.stringify(result[0]['ID']);
+            DriverFound.push(driverid);
+            const index = connectedUsersIDs.indexOf(DriverFound[0])
+            const driversocket = connectedUsersSocketIDs[index];
+            console.log(req.body)
+           io.to(driversocket).emit('ridenotifications', req.body);
+            DriverFound.length = 0;
+            //reqBody.length = 0;
+            console.log(driversocket);
+            console.log(index);
+            //io.emit('ridenotifications', req.body);
             res.json({ result });
         }
     })
@@ -87,6 +103,13 @@ module.exports.getDriver = getDriver = function (data) {
     //console.log(JSON.stringify(data[0]['ID']));
     const driverid = who + JSON.stringify(data[0]['ID']);
     DriverFound.push(driverid);
+    const index = connectedUsersIDs.indexOf(DriverFound[0])
+    const driversocket = connectedUsersSocketIDs[index];
+    io.to(driversocket).emit('ridenotifications', reqBody[0]);
+    DriverFound.length = 0;
+    //reqBody.length = 0;
+    console.log(driversocket);
+    console.log(index);
 }
 
 

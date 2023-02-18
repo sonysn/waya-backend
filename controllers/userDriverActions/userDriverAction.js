@@ -1,3 +1,4 @@
+const jsonwebtoken = require('jsonwebtoken');
 
 exports.addCar = async (req, res) =>  {
     // //get user_id for driver in headers
@@ -72,10 +73,10 @@ exports.availability = async (req, res) => {
 exports.locationUpdateWT = (locationPoint, driver_ID) => {
     SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
     MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
-        console.log('driver location update success!');
+        //console.log('driver location update success!');
     })
 }
 
-exports.notifyDriver = (driverSocket) => {
+exports.notifyDriver = (driverSocket, data) => {
     io.broadcast.to(driverSocket).emit('ridenotification', data);
 }

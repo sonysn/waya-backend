@@ -1,8 +1,8 @@
-const { searchForDriversWT, DriverFound } = require('./controllers/userActions/requestRide');
+const { searchForDriversWT, DriverFound, reqBody } = require('./controllers/userActions/requestRide');
 const { locationUpdateWT, notifyDriver } = require('./controllers/userDriverActions/userDriverAction');
 
-const connectedUsersSocketIDs = [];
-const connectedUsersIDs = [];
+exports.connectedUsersSocketIDs = connectedUsersSocketIDs = [];
+exports.connectedUsersIDs = connectedUsersIDs = [];
 //sockets is a function name
 exports.sockets = function sockets() {
     io.on("connection", (socket) => {
@@ -39,7 +39,10 @@ exports.sockets = function sockets() {
             locationUpdateWT(data, id);
             //console.log(data, id);
             //console.log(connectedUsersSocketIDs)
-            //console.log(DriverFound);
+            console.log(DriverFound);
+            // const index = connectedUsersIDs.indexOf(DriverFound[0])
+            // const driversocket = connectedUsersSocketIDs[index];
+            // console.log(driversocket);
         });
 
         //to find driver during request, just for testing
@@ -47,13 +50,16 @@ exports.sockets = function sockets() {
             console.log(data);
         })
 
-        //TO NOTIFY DRIVER OF requsted ride
-        socket.on('ridenotification', function (data){
-            const index = connectedUsersIDs.indexOf(DriverFound[0])
-            const driversocket = connectedUsersSocketIDs[1];
-            console.log(driversocket);
-            //notifyDriver(driversocket)
-        })
+        //TO NOTIFY DRIVER OF requsted ride NOT WORKING
+        // socket.on('ridenotification', function (){
+        //     const index = connectedUsersIDs.indexOf(DriverFound[0])
+        //     const driversocket = connectedUsersSocketIDs[index];
+        //     console.log(driversocket);
+        //     console.log('hihgg');
+        //     io.to(driversocket).emit('ridenotification', 'loooooll');
+        //     DriverFound.length = 0;
+        //     //notifyDriver(driversocket)
+        // })
 
         //count drivers in the vicinity
         socket.on('driverInfoVicinity', function (data) {
