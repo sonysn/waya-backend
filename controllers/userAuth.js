@@ -18,10 +18,10 @@ exports.validateSignUp = async (req, res, next) => {
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
             if (result.length) {
-                console.log("User with that phone number or email exists.");
+                //console.log("User with that phone number or email exists.");
                 res.status(200).json({ status: 200, message: "User with that phone number or email exists." });
             } else {
-                console.log("User not found.");
+                //console.log("User not found.");
                 //res.status(404).send({ status: 404, message: "User not found." });
                 next();
             }
@@ -99,4 +99,42 @@ exports.signin = async (req, res) => {
             }
         });
     })
+}
+
+exports.changePassword = async (req, res) => {
+    const { userId, newPassword } = req.body;
+//TODO: make sure this does not break cause frankly it should be broken
+    bcrypt.genSalt( function (err, salt) {
+        bcrypt.hash(newPassword, salt, async function (err, hash) {
+            const SQLCOMMAND = `UPDATE users SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
+            await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
+                if (err) {
+                    res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
+                }
+                else {
+                    return res.json({ message: "Password Changed" });
+                }
+            })
+        })
+    })
+}
+
+//verify tokens from headers
+exports.ensureToken = async (req, res, next) => {
+    const bearerHeader = req.headers["authorization"]
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(" ");
+        const bearerToken = bearer[1];
+        req.token = bearerToken;
+        jsonwebtoken.verify(req.token, process.env.JWT_SECRET, function (err) {
+            if (err) {
+                res.sendStatus(403);
+            } else {
+                next();
+            }
+        });
+        //next();
+    } else {
+        res.sendStatus(403);
+    }
 }

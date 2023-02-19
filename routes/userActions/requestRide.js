@@ -1,5 +1,6 @@
 const express = require('express');
-const { requestRide, getTripsHistory, ensureToken, searchForDrivers } = require('../../controllers/userActions/requestRide');
+const { requestRide, getTripsHistory, searchForDrivers } = require('../../controllers/userActions/requestRide');
+const { ensureToken } = require('../../controllers/userAuth');
 
 const router = express.Router();
 
