@@ -141,8 +141,8 @@ exports.ensureToken = async (req, res, next) => {
 }
 
 //for below
-exports.token = token = [];
-exports.t = t = [];
+token = [];
+t = [];
 //generate token for email signup
 exports.genEmailToken = async (req, res) => {
     const { email } = req.body;
@@ -150,7 +150,7 @@ exports.genEmailToken = async (req, res) => {
     const keyLen = 6;
 
     //to empty token array
-    this.token.length = 0;
+    token.length = 0;
 
     for (let i = 0; i < keyLen; i++) {
         // Returns a random integer from 0 to 20: Math.floor(Math.random() * 20
@@ -158,13 +158,13 @@ exports.genEmailToken = async (req, res) => {
         token.push(key[Math.floor(Math.random() * 20)])
     }
     //console.log(token.join(""));
-    this.t.push(token.join(""));
+    t.push(token.join(""));
 
     let mailOptions = {
         from: 'admin@yousellquick.com', // sender address
-        to: "stephen.nyamali@gmail.com", // list of receivers
+        to: `${email}`, // list of receivers
         subject: "Waya Authentication 🔒", // Subject line
-        text: `Hello there, your OTP is ${token.join("")}` // plain text body
+        text: `Hello there, your OTP is ${token.join("")}. It expires in 3 minutes.` // plain text body
     }
 
     await transporter.sendMail(mailOptions, function (err, data) {
@@ -183,6 +183,7 @@ exports.genEmailToken = async (req, res) => {
     //console.log('deleted')
 }
 
+//verify email token for sign up
 exports.verifyEmailToken = async (req, res) => {
     const { userToken } = req.body;
     //res.json(t)
