@@ -1,6 +1,7 @@
-const { MySQLConnection } = require('../index');
+const { MySQLConnection, transporter } = require('../index');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
+const delay = time => new Promise(res => setTimeout(res, time));
 //const saltRounds = 10;
 //hss = '$2b$10$W9vsPnWD/fo6EbJDf/Ocxub9riwVBSHJ.1YR4WlEnVzebyr5FdI42'
 
@@ -40,7 +41,7 @@ exports.signup = async (req, res) => {
 
     bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt) {
         bcrypt.hash(password, salt, async function (err, hash) {
-            console.log(hash);
+            //console.log(hash);
 
             var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
             //sql command to db
@@ -103,8 +104,8 @@ exports.signin = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
     const { userId, newPassword } = req.body;
-//TODO: make sure this does not break cause frankly it should be broken
-    bcrypt.genSalt( function (err, salt) {
+    //TODO: make sure this does not break cause frankly it should be broken
+    bcrypt.genSalt(function (err, salt) {
         bcrypt.hash(newPassword, salt, async function (err, hash) {
             const SQLCOMMAND = `UPDATE users SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
             await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
@@ -137,4 +138,61 @@ exports.ensureToken = async (req, res, next) => {
     } else {
         res.sendStatus(403);
     }
+}
+
+//for below
+exports.token = token = [];
+exports.t = t = [];
+//generate token for email signup
+exports.genEmailToken = async (req, res) => {
+    const { email } = req.body;
+    const key = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 2, 6, 5, 3, 8, 1, 4, 7, 0, 9];
+    const keyLen = 6;
+
+    //to empty token array
+    this.token.length = 0;
+
+    for (let i = 0; i < keyLen; i++) {
+        // Returns a random integer from 0 to 20: Math.floor(Math.random() * 20
+        //console.log(key[Math.floor(Math.random() * 20)])
+        token.push(key[Math.floor(Math.random() * 20)])
+    }
+    //console.log(token.join(""));
+    this.t.push(token.join(""));
+
+    let mailOptions = {
+        from: 'admin@yousellquick.com', // sender address
+        to: "stephen.nyamali@gmail.com", // list of receivers
+        subject: "Waya Authentication 🔒", // Subject line
+        text: `Hello there, your OTP is ${token.join("")}` // plain text body
+    }
+
+    await transporter.sendMail(mailOptions, function (err, data) {
+        if (err) {
+            console.log("Error " + err);
+        } else {
+            //console.log("Email sent successfully");
+            res.json({ message: "Email Sent! Check your email" })
+        }
+    });
+
+    //this deletes the otp code after (1,800,000 is 3 minutes)
+    await delay(1800000);
+    const index = t.indexOf(token.join(""));
+    t.splice(index, 1);
+    //console.log('deleted')
+}
+
+exports.verifyEmailToken = async (req, res) => {
+    const { userToken } = req.body;
+    //res.json(t)
+    if (t.indexOf(userToken) > -1) {
+        const index = t.indexOf(userToken);
+        t.splice(index, 1);
+        res.json({ message: "Email Verified" });
+    } else {
+        res.json({ message: "Wrong OTP code or expired! Try again!" });
+    }
+
+    //res.json(`${this.token.join("")}`);
 }

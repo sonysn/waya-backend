@@ -60,6 +60,7 @@ exports.searchForDrivers = async (req, res) => {
             //await getDriver(result);
             const who = 'Driver';
             //console.log(JSON.stringify(data[0]['ID']));
+            //this identifies the driver on the socket io connection, also in app
             const driverid = who + JSON.stringify(result[0]['ID']);
             DriverFound.push(driverid);
             const index = connectedUsersIDs.indexOf(DriverFound[0])

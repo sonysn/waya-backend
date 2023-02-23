@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const expressValidator = require('express-validator');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const nodemailer = require("nodemailer");
 const { sockets } = require('./sockets');
 dotenv.config();
 
@@ -34,6 +35,15 @@ exports.io = io = new Server(httpServer, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
+    },
+  });
+
+exports.transporter = transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASS, // generated ethereal password
     },
   });
 
