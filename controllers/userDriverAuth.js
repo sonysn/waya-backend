@@ -1,6 +1,7 @@
 const { MySQLConnection, transporter } = require('../index');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
+const { PSQL } = require('../databases/db_config');
 //const saltRounds = 10;
 const delay = time => new Promise(res=>setTimeout(res,time));
 
@@ -9,14 +10,14 @@ exports.validateSignUp = async (req, res, next) => {
     const { firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID } = req.body;
 
     //check if driver with phone number exists
-    const SQLCOMMAND1 = `SELECT * FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
-    await MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
+    const SQLCOMMAND1 = `SELECT * FROM driver WHERE PHONE_NUMBER = $1 OR EMAIL = $2;`
+    await PSQL.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
 
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
-            if (result.length) {
+            if (result.rows.length) {
                 console.log("User with that phone number or email exists.");
                 res.status(200).json({ status: 200, message: "User with that phone number or email exists." });
             } else {
@@ -34,16 +35,16 @@ exports.signup = async (req, res) => {
     var hashedPassword;
     //escaping query values to prevent sql injection
     const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);`;
     //hash user password
 
     bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt){
         bcrypt.hash(password, salt, async function(err, hash){
             console.log(hash);
 
-            var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
+            // var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
             //sql command to db
-            await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
+            await PSQL.query(SQLCOMMAND, [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID], (err, result) => {
                 //if (err) throw err;
                 return res.json({ message: "Signup success!" });
             });
@@ -54,17 +55,18 @@ exports.signup = async (req, res) => {
 }
 
 exports.ValidateSignin = async(req, res, next) => {
-    const { phoneNumber, email, password } = req.body;
+    const { phoneNumber, email } = req.body;
 
-    const SQLCOMMAND = `SELECT * FROM driver where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
-    var data = [phoneNumber, email, password];
-    await MySQLConnection.query(SQLCOMMAND, data, async(err, result) =>{
+    const SQLCOMMAND = `SELECT * FROM driver where PHONE_NUMBER = $1 OR EMAIL = $2;`
+    //var data = [phoneNumber, email];
+    await PSQL.query(SQLCOMMAND, [phoneNumber, email], async(err, result) =>{
+        //console.log(result.rows.length)
         await delay(500)
         
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
-        } else if (result.length) {
+        } else if (result.rows.length) {
             console.log("User with that email exists.");
             //res.status(200).json({ status: 200, message: "User with that email exists." });
             next();
@@ -79,27 +81,28 @@ exports.ValidateSignin = async(req, res, next) => {
 exports.signin = async (req, res) => {
     const { phoneNumber, email, password } = req.body;
 
-    const SQLCOMMAND = `SELECT PASSWORD FROM driver where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
-    const SQLCOMMAND1 = `SELECT * FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
-    await MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
-        //res.json(result[0].PASSWORD);
+    const SQLCOMMAND = `SELECT password FROM driver where phone_number = $1 OR email = $2;`;
+    const SQLCOMMAND1 = `SELECT * FROM driver WHERE PHONE_NUMBER = $1 OR EMAIL = $2;`;
+    await PSQL.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
+        //res.json(result.rows[0].password);
         //console.log(password)
-        bcrypt.compare(password, result[0].PASSWORD, function(err, result){
+        bcrypt.compare(password, result.rows[0].password, function(err, result){
             // console.log(result);
             //res.json(result);
             if (result) {
-                MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
-                    const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
+                PSQL.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
+                    const TokenSignData = result.rows[0].phone_number + result.rows[0].id;
                     //this signs the token for route authorization
+                    const data = result.rows
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
-                    res.json({ token, result, message: "Logged In" });
+                    res.json({ token, data, message: "Logged In" });
                  });
                 //res.json({ message: "Logged In"});
             } else {
                 res.status(401).send({ message: "Wrong password or Email"})
             }
      })
-    })
+    });
 }
 
 //for below

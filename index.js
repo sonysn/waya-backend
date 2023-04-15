@@ -5,7 +5,9 @@ const expressValidator = require('express-validator');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const nodemailer = require("nodemailer");
+const Flutterwave = require('flutterwave-node-v3');
 const { sockets } = require('./sockets');
+const { Pool } = require('pg');
 dotenv.config();
 
 const app = express();
@@ -47,6 +49,8 @@ exports.transporter = transporter = nodemailer.createTransport({
     },
   });
 
+exports.flw = flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
+
 //   io.on("connection", (socket) =>{
 //     var drivers;
 //     // username = 'lola';
@@ -76,6 +80,7 @@ const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
 const userDriverActionsRoutes = require('./routes/userDriverActions/userDriverActions');
 const requestRideRoutes = require('./routes/userActions/requestRide');
+const depositRoutes = require('./routes/userActions/deposit');
 
 //middleware
 app.set(sockets());
@@ -86,6 +91,7 @@ app.use('/', userAuthRoutes);
 app.use('/', userDriverAuthRoutes);
 app.use('/', userDriverActionsRoutes);
 app.use('/', requestRideRoutes);
+app.use('/', depositRoutes);
 
 // const addUsers = async (req, res) => {
 //     //to be requested from user

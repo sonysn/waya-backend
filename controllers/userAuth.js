@@ -1,6 +1,7 @@
 const { MySQLConnection, transporter } = require('../index');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
+const { PSQL } = require('../databases/db_config');
 const delay = time => new Promise(res => setTimeout(res, time));
 //const saltRounds = 10;
 //hss = '$2b$10$W9vsPnWD/fo6EbJDf/Ocxub9riwVBSHJ.1YR4WlEnVzebyr5FdI42'
@@ -11,14 +12,14 @@ exports.validateSignUp = async (req, res, next) => {
 
     //check if user with phone number exists
     // const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER = ?;`
-    const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
-    await MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
+    const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER = $1 OR EMAIL = $2;`;
+    await PSQL.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
 
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
-            if (result.length) {
+            if (result.rows.length) {
                 //console.log("User with that phone number or email exists.");
                 res.status(200).json({ status: 200, message: "User with that phone number or email exists." });
             } else {
@@ -36,16 +37,16 @@ exports.signup = async (req, res) => {
     var hashedPassword;
     //escaping query values to prevent sql injection
     const SQLCOMMAND = `INSERT INTO users(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`
+    VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);`
     //hash user password
 
     bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt) {
         bcrypt.hash(password, salt, async function (err, hash) {
             //console.log(hash);
 
-            var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
+            // var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
             //sql command to db
-            await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
+            await PSQL.query(SQLCOMMAND, [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID], (err, result) => {
                 //if (err) throw err;
                 return res.json({ message: "Signup success!" });
             });
@@ -58,14 +59,14 @@ exports.signup = async (req, res) => {
 exports.ValidateSignin = async (req, res, next) => {
     const { phoneNumber, email, password } = req.body;
 
-    const SQLCOMMAND = `SELECT * FROM users where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
-    var data = [phoneNumber, email, password];
-    await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
+    const SQLCOMMAND = `SELECT * FROM users where PHONE_NUMBER = $1 OR EMAIL = $2;`
+    // var data = [phoneNumber, email];
+    await PSQL.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
 
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
-        } if (result.length) {
+        } if (result.rows.length) {
             console.log("User with that email exists.");
             //res.status(200).json({ status: 200, message: "User with that email exists." });
             next();
@@ -80,20 +81,21 @@ exports.ValidateSignin = async (req, res, next) => {
 exports.signin = async (req, res) => {
     const { phoneNumber, email, password } = req.body;
 
-    const SQLCOMMAND = `SELECT PASSWORD FROM users where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
-    const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
-    MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, results) => {
+    const SQLCOMMAND = `SELECT PASSWORD FROM users where PHONE_NUMBER = $1 OR EMAIL $2;`;
+    const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER = $1 OR EMAIL = $2;`;
+    await PSQL.query(SQLCOMMAND, [phoneNumber, email], (err, results) => {
         //this compares the password of user based on the hashing bcrypt
-        bcrypt.compare(password, results[0].PASSWORD, function (err, result) {
+        bcrypt.compare(password, results.rows[0].password, function (err, result) {
             //console.log(results);
             //res.json(result);
             if (result) {
-                MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
+                PSQL.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
                     //console.log(result[0].PHONE_NUMBER + result[0].ID)
-                    const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
+                    const TokenSignData = result.rows[0].phone_number + result.rows[0].id;
                     //this signs the token for route authorization
+                    const data = result.rows
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
-                    res.json({ token, result, message: "Logged In" });
+                    res.json({ token, data, message: "Logged In" });
                 });
             } else {
                 res.json({ message: "Wrong password!" });
@@ -107,8 +109,8 @@ exports.changePassword = async (req, res) => {
     //TODO: make sure this does not break cause frankly it should be broken
     bcrypt.genSalt(function (err, salt) {
         bcrypt.hash(newPassword, salt, async function (err, hash) {
-            const SQLCOMMAND = `UPDATE users SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
-            await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
+            const SQLCOMMAND = `UPDATE users SET PASSWORD = "${hash}" WHERE ID = $1;`;
+            await PSQL.query(SQLCOMMAND, userId, (err, result) => {
                 if (err) {
                     res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
                 }

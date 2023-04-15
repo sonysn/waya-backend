@@ -1,3 +1,4 @@
+const { PSQL } = require("../../databases/db_config");
 
 exports.requestRide = async (req, res, next) => {
     const { userId, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
@@ -11,12 +12,14 @@ exports.requestRide = async (req, res, next) => {
 
     requestTime = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
     // requestTime = Time.getTime();
+    //TODO: CHANGES TO requested_rides instead of requested_ridesl
     SQLCOMMAND = `INSERT INTO requested_ridesl(USER_ID, REQUEST_DATE, REQUEST_TIME, PICKUP_LOCATION, DROPOFF_LOCATION, EST_FARE, SURGE, 
-        PICKUP_LOCATION_POSITION, DROP_OFF_LOCATION_POSTITION, STATUS) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    var data = [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
-        dropoffLocationPostion, status];
+        PICKUP_LOCATION_POSITION, DROP_OFF_LOCATION_POSTITION, STATUS) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+    // var data = [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
+    //     dropoffLocationPostion, status];
 
-    await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
+    await PSQL.query(SQLCOMMAND, [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
+        dropoffLocationPostion, status], (err, result) => {
         //res.json({ requestTime, message: "Trip requested" });
         next();
     });
@@ -25,10 +28,11 @@ exports.requestRide = async (req, res, next) => {
 exports.getTripsHistory = async (req, res) => {
     const userId = req.params.userId;
 
-    SQLCOMMAND = `SELECT * FROM requested_rides WHERE USER_ID = ?`;
+    SQLCOMMAND = `SELECT * FROM requested_rides WHERE USER_ID = $1`;
 
-    await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
-        res.json({ result });
+    await PSQL.query(SQLCOMMAND, userId, (err, result) => {
+        const data = result.rows
+        res.json({ data });
     });
 }
 
