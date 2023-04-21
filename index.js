@@ -7,47 +7,67 @@ const dotenv = require('dotenv');
 const nodemailer = require("nodemailer");
 const Flutterwave = require('flutterwave-node-v3');
 const { sockets } = require('./sockets');
-const { Pool } = require('pg');
+const { upload } = require('./databases/upload_config');
 dotenv.config();
 
 const app = express();
 
 //exporting this for various purposes
 exports.MySQLConnection = MySQLConnection = mysql.createPool({
-    host: process.env.HOST,
-    user: process.env.USER,
-    password: process.env.PASSWORD,
-    database: process.env.DATABASE
+  host: process.env.HOST,
+  user: process.env.USER,
+  password: process.env.PASSWORD,
+  database: process.env.DATABASE
 });
 
 MySQLConnection.getConnection(function (err) {
-    if (err) throw err;
-    console.log("MYSQL DB Connected!");
+  if (err) throw err;
+  console.log("MYSQL DB Connected!");
 });
 
 const port = process.env.PORT || 3000;
 
 const httpServer = app.listen(port, () => {
-    console.log(`A Node JS API is listening on port: ${port}`)
+  console.log(`A Node JS API is listening on port: ${port}`)
 })
 
 const { Server } = require("socket.io");
 //export this
 exports.io = io = new Server(httpServer, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-  });
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 
+var f = (req, res) => {
+
+  // Access text data from form
+  const textData = req.body.textData;
+
+  // Access uploaded file information
+  const fileData = req.files['image'][0];
+
+  if (!fileData) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  console.log("Image uploaded: " + fileData.filename + " by " + textData);
+  return res.status(200).send("Image uploaded.");
+}
+// Define route for image upload
+app.post("/api/upload-image",upload.fields([
+  { name: 'image' },
+  { name: 'textData' }
+]), f)
 exports.transporter = transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASS, // generated ethereal password
-    },
-  });
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.EMAIL_PASS, // generated ethereal password
+  },
+});
 
 exports.flw = flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
@@ -56,7 +76,7 @@ exports.flw = flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_
 //     // username = 'lola';
 //     // client.id = username;
 //     console.log('client connected...', socket.id);
-    
+
 //     //emit is to send, on is to listen
 
 //     //whenever someone disconnects this gets executed, handle disconnect
@@ -110,7 +130,7 @@ app.use('/', depositRoutes);
 // }
 
 app.get('/', (req, res) => {
-    res.json({ info: 'Hello, world' })
+  res.json({ info: 'Hello, world' })
 })
 
 //app.post('/adduser', addUsers);

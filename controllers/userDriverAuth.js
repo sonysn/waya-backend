@@ -1,8 +1,10 @@
 const { MySQLConnection, transporter } = require('../index');
+const { imagekit } = require('../databases/imagekit_config');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
+const multer = require("multer");
 //const saltRounds = 10;
-const delay = time => new Promise(res=>setTimeout(res,time));
+const delay = time => new Promise(res => setTimeout(res, time));
 
 exports.validateSignUp = async (req, res, next) => {
     //to be requested from user
@@ -28,18 +30,62 @@ exports.validateSignUp = async (req, res, next) => {
     })
 }
 
+const uploadStructure = async function(fileinfo, folderD){
+    var reply;
+    await imagekit.upload({
+        file: fileinfo.buffer.toString('base64'),
+        fileName: fileinfo.originalname,
+        folder: `/driverfiles/${folderD}`
+    }).then(res => { 
+        reply = res.url;
+     }).catch(error => {
+        console.log(error);
+    })
+
+    return reply;
+}
+
+//TODO: create /driverfiles in imagekit in new account if applicable
 exports.signup = async (req, res) => {
     //to be requested from user
     const { firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID } = req.body;
     var hashedPassword;
+    var profilePhotoLink;
+    var driversLicenseLink;
+    var vehicleInsuranceLink;
+
+    // Access uploaded file information
+    const profilePhotoData = req.files['profilePhoto'][0];
+    const driversLicenseData = req.files['driversLicense'][0];
+    const vehicleInsuranceData = req.files['vehicleInsurance'][0];
+
+    //date parse
+    const today = new Date();
+    var month = today.getMonth() + 1;
+    //remove "+"" from phone number
+    var phonestr = phoneNumber
+    const folderData = `${firstname}_${lastname}_${phonestr.replace('+', '')}_${today.getFullYear() + '-' + month + '-' + today.getDate()}`
+    
+    //console.log(profilePhotoData.buffer)
+    imagekit.createFolder({
+        folderName: folderData,
+        parentFolderPath: "/driverfiles"
+    }).then(
+        profilePhotoLink = await uploadStructure(profilePhotoData, folderData),
+        driversLicenseLink = await uploadStructure(driversLicenseData, folderData),
+        vehicleInsuranceLink = await uploadStructure(vehicleInsuranceData, folderData)
+        // console.log('p: ' + p)
+    );
+
     //escaping query values to prevent sql injection
-    const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
+    const SQLCOMMAND = `INSERT INTO driverk(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     //hash user password
-
-    bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt){
-        bcrypt.hash(password, salt, async function(err, hash){
-            console.log(hash);
+    //TODO: process.env.SALTROUNDS not working properly
+    bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
+        //console.log(process.env.SALTROUNDS)
+        bcrypt.hash(password, salt, async function (err, hash) {
+            console.log('hash: ' + hash);
 
             var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
             //sql command to db
@@ -50,17 +96,17 @@ exports.signup = async (req, res) => {
         })
     })
 
-    
+
 }
 
-exports.ValidateSignin = async(req, res, next) => {
+exports.ValidateSignin = async (req, res, next) => {
     const { phoneNumber, email, password } = req.body;
 
     const SQLCOMMAND = `SELECT * FROM driver where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     var data = [phoneNumber, email, password];
-    await MySQLConnection.query(SQLCOMMAND, data, async(err, result) =>{
+    await MySQLConnection.query(SQLCOMMAND, data, async (err, result) => {
         await delay(500)
-        
+
         if (err) {
             console.error("An error occurred:", err.message);
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
@@ -84,7 +130,7 @@ exports.signin = async (req, res) => {
     await MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
         //res.json(result[0].PASSWORD);
         //console.log(password)
-        bcrypt.compare(password, result[0].PASSWORD, function(err, result){
+        bcrypt.compare(password, result[0].PASSWORD, function (err, result) {
             // console.log(result);
             //res.json(result);
             if (result) {
@@ -93,12 +139,12 @@ exports.signin = async (req, res) => {
                     //this signs the token for route authorization
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
                     res.json({ token, result, message: "Logged In" });
-                 });
+                });
                 //res.json({ message: "Logged In"});
             } else {
-                res.status(401).send({ message: "Wrong password or Email"})
+                res.status(401).send({ message: "Wrong password or Email" })
             }
-     })
+        })
     })
 }
 
