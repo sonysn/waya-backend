@@ -39,7 +39,7 @@ exports.signup = async (req, res) => {
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`
     //hash user password
 
-    bcrypt.genSalt(process.env.SALTROUNDS, function (err, salt) {
+    bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
         bcrypt.hash(password, salt, async function (err, hash) {
             //console.log(hash);
 
