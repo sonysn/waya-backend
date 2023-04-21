@@ -78,7 +78,7 @@ exports.signup = async (req, res) => {
     );
 
     //escaping query values to prevent sql injection
-    const SQLCOMMAND = `INSERT INTO driverk(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
+    const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     //hash user password
     //TODO: process.env.SALTROUNDS not working properly
@@ -204,4 +204,22 @@ exports.verifyEmailToken = async (req, res) => {
     }
 
     //res.json(`${token.join("")}`);
+}
+
+exports.changePassword = async (req, res) => {
+    const { userId, newPassword } = req.body;
+    //TODO: make sure this does not break cause frankly it should be broken
+    bcrypt.genSalt(function (err, salt) {
+        bcrypt.hash(newPassword, salt, async function (err, hash) {
+            const SQLCOMMAND = `UPDATE driver SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
+            await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
+                if (err) {
+                    res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
+                }
+                else {
+                    return res.json({ message: "Password Changed" });
+                }
+            })
+        })
+    })
 }
