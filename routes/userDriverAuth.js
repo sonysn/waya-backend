@@ -15,7 +15,7 @@ router.post('/driversignup',upload.fields([
     { name: 'dob' },
     { name: 'profilePhoto' },
     { name: 'driversLicense' },
-    { name: 'vehicleInsurance' },]), validateSignUp, signup);
+    { name: 'vehicleInsurance' },]),userDriverSignupValidator, validateSignUp, signup);
 router.post('/driversignin', ValidateSignin, signin);
 router.post('/driverchangepassword', changePassword);
 router.get('/genemailtokendriver', genEmailToken);
