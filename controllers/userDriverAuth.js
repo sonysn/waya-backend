@@ -8,7 +8,7 @@ const delay = time => new Promise(res => setTimeout(res, time));
 
 exports.validateSignUp = async (req, res, next) => {
     //to be requested from user
-    const { firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID } = req.body;
+    const { firstname, lastname, password, phoneNumber, email, address, dob } = req.body;
 
     //check if driver with phone number exists
     const SQLCOMMAND1 = `SELECT * FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
@@ -41,15 +41,17 @@ const uploadStructure = async function(fileinfo, folderD){
      }).catch(error => {
         console.log(error);
     })
-
+    //This returns the url of the saved file
     return reply;
 }
 
 //TODO: create /driverfiles in imagekit in new account if applicable
 exports.signup = async (req, res) => {
     //to be requested from user
-    const { firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID } = req.body;
+    const { firstname, lastname, password, phoneNumber, email, address, dob } = req.body;
     var hashedPassword;
+
+    //url returns
     var profilePhotoLink;
     var driversLicenseLink;
     var vehicleInsuranceLink;
@@ -78,16 +80,16 @@ exports.signup = async (req, res) => {
     );
 
     //escaping query values to prevent sql injection
-    const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+    const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, DRIVER_LICENSE, VEHICLE_INSURANCE) 
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     //hash user password
     //TODO: process.env.SALTROUNDS not working properly
     bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
         //console.log(process.env.SALTROUNDS)
         bcrypt.hash(password, salt, async function (err, hash) {
-            console.log('hash: ' + hash);
+            //console.log('hash: ' + hash);
 
-            var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
+            var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink];
             //sql command to db
             await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
                 //if (err) throw err;

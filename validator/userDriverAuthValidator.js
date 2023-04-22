@@ -19,11 +19,11 @@ exports.userDriverSignupValidator = (req, res, next) => {
     //check if dob is null
     req.check('dob', "Date of Birth is required!").notEmpty();
 
-    //check if profilePhoto is null
-    req.check('profilePhoto', "Your profile is required!").notEmpty();
+    // //check if profilePhoto is null
+    // req.check('profilePhoto', "Your profile is required!").notEmpty();
 
-    //check if Means of ID is null
-    req.check('meansofID', "Means of ID is required!").notEmpty();
+    // //check if Means of ID is null
+    // req.check('meansofID', "Means of ID is required!").notEmpty();
 
     //check for errors
     const errors = req.validationErrors();
