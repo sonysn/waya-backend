@@ -54,7 +54,7 @@ exports.searchForDrivers = async (req, res) => {
             console.log(err);
             res.status(500).json("Internal server error");
         } else if (result.length === 0) {
-            res.json("No drivers available");
+            res.status(404).json("No drivers available");
             //res.json({ result });
         } else {
             //await reqBody.push(req.body);

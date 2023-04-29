@@ -140,6 +140,7 @@ exports.signin = async (req, res) => {
                     const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
                     //this signs the token for route authorization
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
+                    result[0].animal = 'doggo';
                     res.json({ token, result, message: "Logged In" });
                 });
                 //res.json({ message: "Logged In"});
@@ -196,17 +197,20 @@ exports.genEmailToken = async (req, res) => {
 //verify email token for sign up
 exports.verifyEmailToken = async (req, res) => {
     const { userToken } = req.body;
-    //res.json(t)
-    if (t.indexOf(userToken) > -1) {
+
+    // Check that userToken is a string of 6 digits
+    const isTokenValid = /^\d{6}$/.test(userToken);
+
+    if (isTokenValid && t.indexOf(userToken) > -1) {
         const index = t.indexOf(userToken);
         t.splice(index, 1);
+        token.splice(index, 1);
         res.json({ message: "Email Verified" });
     } else {
         res.json({ message: "Wrong OTP code or expired! Try again!" });
     }
-
-    //res.json(`${token.join("")}`);
 }
+
 
 exports.changePassword = async (req, res) => {
     const { userId, newPassword } = req.body;

@@ -100,7 +100,7 @@ const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
 const userDriverActionsRoutes = require('./routes/userDriverActions/userDriverActions');
 const requestRideRoutes = require('./routes/userActions/requestRide');
-const depositRoutes = require('./routes/userActions/deposit');
+const depositRoutes = require('./routes/payments/deposit');
 
 //middleware
 app.set(sockets());

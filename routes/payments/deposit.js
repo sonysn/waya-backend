@@ -1,5 +1,5 @@
 const express = require('express');
-const { deposit, validateCharge } = require('../../controllers/userActions/deposit');
+const { deposit, validateCharge } = require('../../controllers/payments/deposit_flutterwave');
 
 const router = express.Router();
 

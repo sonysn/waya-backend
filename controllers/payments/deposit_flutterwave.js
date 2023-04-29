@@ -22,6 +22,7 @@ exports.deposit = async (req, res) => {
 
         const response = await flw.Charge.card(payload);
         console.log(response);
+        res.json(response);
     } catch (error) {
         console.log(error)
     }
@@ -31,7 +32,8 @@ exports.deposit = async (req, res) => {
 exports.validateCharge = async (req, res) => {
     const response = await flw.Charge.validate({
         otp: req.body.otp,
-        flw_ref: req.session.flw_ref
+        flw_ref: req.body.flw_ref
     });
     console.log(response);
+    res.json(response);
 }
