@@ -6,15 +6,17 @@ const morgan = require('morgan');
 const dotenv = require('dotenv');
 const nodemailer = require("nodemailer");
 const Flutterwave = require('flutterwave-node-v3');
+const mongoose = require('mongoose');
 const { sockets } = require('./sockets');
 const { upload } = require('./databases/upload_config');
 dotenv.config();
+
 
 const app = express();
 
 //exporting this for various purposes
 exports.MySQLConnection = MySQLConnection = mysql.createPool({
-  host: process.env.HOST,
+  host: 'localhost',
   user: process.env.USER,
   password: process.env.PASSWORD,
   database: process.env.DATABASE
@@ -23,6 +25,15 @@ exports.MySQLConnection = MySQLConnection = mysql.createPool({
 MySQLConnection.getConnection(function (err) {
   if (err) throw err;
   console.log("MYSQL DB Connected!");
+});
+
+exports.mongoose = mongoose.connect('mongodb://localhost:27017/waya', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('Connected to MongoDB!');
+}).catch((err) => {
+  console.error('Error connecting to MongoDB:', err);
 });
 
 const port = process.env.PORT || 3000;
