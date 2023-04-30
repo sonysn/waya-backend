@@ -33,51 +33,61 @@ exports.getTripsHistory = async (req, res) => {
     });
 }
 
+
 exports.DriverFound = DriverFound = [];
 exports.reqBody = reqBody = [];
-//http request
+
+// http request
+//TODO ADD USER NAMES
 exports.searchForDrivers = async (req, res) => {
+  const {
+    userId,
+    pickupLocation,
+    dropoffLocation,
+    estFare,
+    surge,
+    pickupLocationPosition,
+    dropoffLocationPostion,
+    status,
+  } = req.body;
 
-    const { userId, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
-        dropoffLocationPostion, status } = req.body;
-
-
-    SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING FROM (
+  SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING FROM (
         SELECT *, ST_Distance_Sphere(
         point(${pickupLocationPosition}),
         CURRENT_LOCATION
     ) as distance FROM driver WHERE AVAILABILITY = true
     ) AS LOCATION WHERE distance < 10000`;
 
-    await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
-        if (err) {
-            console.log(err);
-            res.status(500).json("Internal server error");
-        } else if (result.length === 0) {
-            res.status(404).json("No drivers available");
-            //res.json({ result });
-        } else {
-            //await reqBody.push(req.body);
-            //await getDriver(result);
-            const who = 'Driver';
-            //console.log(JSON.stringify(data[0]['ID']));
-            //this identifies the driver on the socket io connection, also in app
-            const driverid = who + JSON.stringify(result[0]['ID']);
-            DriverFound.push(driverid);
-            const index = connectedUsersIDs.indexOf(DriverFound[0])
-            const driversocket = connectedUsersSocketIDs[index];
-            console.log(req.body)
-           io.to(driversocket).emit('ridenotifications', req.body);
-            DriverFound.length = 0;
-            //reqBody.length = 0;
-            console.log(driversocket);
-            console.log(index);
-            //io.emit('ridenotifications', req.body);
-            res.json({ result });
-        }
-    })
-}
+  await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json("Internal server error");
+    } else if (result.length === 0) {
+      res.status(404).json("No drivers available");
+    } else {
+      const who = "Driver";
+      const driverid = who + JSON.stringify(result[0]["ID"]);
 
+      // Check if driver already exists in array
+      if (!DriverFound.includes(driverid)) {
+        DriverFound.push(driverid);
+
+        const index = connectedUsersIDs.indexOf(DriverFound[0]);
+        const driversocket = connectedUsersSocketIDs[index];
+
+        io.to(driversocket).emit("ridenotifications", req.body);
+        DriverFound.length = 0;
+
+        console.log(driversocket);
+        console.log(index);
+      }
+      res.json({ result });
+    }
+  });
+};
+
+
+//FIXME APPARANTLY THIS IS UNUSED
 module.exports.getDriver = getDriver = function (data) {
     const who = 'Driver';
     //console.log(JSON.stringify(data[0]['ID']));
