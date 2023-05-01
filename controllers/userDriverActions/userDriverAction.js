@@ -78,7 +78,3 @@ exports.locationUpdateWT = (locationPoint, driver_ID) => {
         //console.log('driver location update success!');
     })
 }
-
-exports.notifyDriver = (driverSocket, data) => {
-    io.broadcast.to(driverSocket).emit('ridenotification', data);
-}
