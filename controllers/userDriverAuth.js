@@ -30,15 +30,15 @@ exports.validateSignUp = async (req, res, next) => {
     })
 }
 
-const uploadStructure = async function(fileinfo, folderD){
+const uploadStructure = async function (fileinfo, folderD) {
     var reply;
     await imagekit.upload({
         file: fileinfo.buffer.toString('base64'),
         fileName: fileinfo.originalname,
         folder: `/driverfiles/${folderD}`
-    }).then(res => { 
+    }).then(res => {
         reply = res.url;
-     }).catch(error => {
+    }).catch(error => {
         console.log(error);
     })
     //This returns the url of the saved file
@@ -67,7 +67,7 @@ exports.signup = async (req, res) => {
     //remove "+"" from phone number
     var phonestr = phoneNumber
     const folderData = `${firstname}_${lastname}_${phonestr.replace('+', '')}_${today.getFullYear() + '-' + month + '-' + today.getDate()}`
-    
+
     //console.log(profilePhotoData.buffer)
     imagekit.createFolder({
         folderName: folderData,
@@ -92,7 +92,7 @@ exports.signup = async (req, res) => {
             var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink];
             //sql command to db
             await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
-                //if (err) throw err;
+                if (err) console.log(err);
                 return res.json({ message: "Signup success!" });
             });
         })
@@ -102,7 +102,7 @@ exports.signup = async (req, res) => {
 }
 
 exports.ValidateSignin = async (req, res, next) => {
-    const { phoneNumber, email, password } = req.body;
+    const { phoneNumber, email, password, deviceID } = req.body;
 
     const SQLCOMMAND = `SELECT * FROM driver where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     var data = [phoneNumber, email, password];
@@ -125,18 +125,21 @@ exports.ValidateSignin = async (req, res, next) => {
 }
 
 exports.signin = async (req, res) => {
-    const { phoneNumber, email, password } = req.body;
+    const { phoneNumber, email, password, deviceID } = req.body;
 
     const SQLCOMMAND = `SELECT PASSWORD FROM driver where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
     const SQLCOMMAND1 = `SELECT * FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    const SQLCOMMAND2 = `UPDATE driver SET DEVICE_REG_TOKEN = ? WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     await MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
         //res.json(result[0].PASSWORD);
         //console.log(password)
+        if (err) console.log(err);
         bcrypt.compare(password, result[0].PASSWORD, function (err, result) {
             // console.log(result);
             //res.json(result);
             if (result) {
                 MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
+                    MySQLConnection.query(SQLCOMMAND2, [deviceID, phoneNumber, email], function (err, result) { if (err) console.log('Command2err: ', err) });
                     const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
                     //this signs the token for route authorization
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
@@ -150,6 +153,15 @@ exports.signin = async (req, res) => {
         })
     })
 }
+
+exports.logout = async (req, res) => {
+    const { id } = req.body;
+    const SQLCOMMAND = `UPDATE driver SET DEVICE_REG_TOKEN = NULL WHERE ID = ?;`
+    MySQLConnection.query(SQLCOMMAND, id, function (err, result){
+        if (err){console.log("Logout SQL Error: " + err)}
+    });
+    res.sendStatus(200);
+};
 
 //for below
 token = [];

@@ -1,5 +1,5 @@
 const express = require('express');
-const { signup, validateSignUp, ValidateSignin, signin, genEmailToken, verifyEmailToken, changePassword } = require('../controllers/userDriverAuth');
+const { signup, validateSignUp, ValidateSignin, signin, genEmailToken, verifyEmailToken, changePassword, logout } = require('../controllers/userDriverAuth');
 const { userDriverSignupValidator } = require('../validator/userDriverAuthValidator');
 const { upload } = require('../databases/upload_config');
 
@@ -20,5 +20,6 @@ router.post('/driversignin', ValidateSignin, signin);
 router.post('/driverchangepassword', changePassword);
 router.get('/genemailtokendriver', genEmailToken);
 router.get('/verifyemaildriver', verifyEmailToken);
+router.post('/logout', logout);
 
 module.exports = router;
