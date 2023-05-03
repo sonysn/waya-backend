@@ -1,6 +1,6 @@
 const bodyParser = require('body-parser');
 const paystack = require('paystack')(process.env.PAYSTACK_SECRET_KEY);
-const { Payment } = require('../../models/paystack_deposit');
+const { PaystackDeposits } = require('../../models/paystack_deposit');
 const { MySQLConnection } = require('../../index');
 
 exports.depositPaystack = async (req, res) => {
@@ -27,8 +27,8 @@ exports.callbackPaystack = async (req, res) => {
   console.log('hi')
   paystack.transaction.verify(reference).then((response) => {
     const { status } = response.data;
-    console.log('hi2')
-
+    //console.log(response)
+   
     //to save in mongo
     const parsedPayment = {
       status: response.status,
@@ -62,7 +62,7 @@ exports.callbackPaystack = async (req, res) => {
       }
     };
 
-    const payment = new Payment(parsedPayment);
+    const payment = new PaystackDeposits(parsedPayment);
     payment.save()
       .then(() => console.log('Data saved to database'))
       .catch(error => console.error(error));
@@ -81,7 +81,7 @@ exports.callbackPaystack = async (req, res) => {
           console.error(err);
           return;
         }
-        const SQLCOMMAND1 = `UPDATE driver SET ACCOUNT_BALANCE LIKE ? WHERE EMAIL LIKE ?;`
+        const SQLCOMMAND1 = `UPDATE driver SET ACCOUNT_BALANCE = ? WHERE EMAIL LIKE ?;`
         const balance = result[0].ACCOUNT_BALANCE;
         const deposit = (response.data.amount) / 100;
         const new_balance = balance + deposit;

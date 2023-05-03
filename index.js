@@ -15,8 +15,9 @@ dotenv.config();
 const app = express();
 
 //exporting this for various purposes
+//TODO WATCH THIS
 exports.MySQLConnection = MySQLConnection = mysql.createPool({
-  host: 'localhost',
+  host: process.env.HOST,
   user: process.env.USER,
   password: process.env.PASSWORD,
   database: process.env.DATABASE
@@ -27,7 +28,16 @@ MySQLConnection.getConnection(function (err) {
   console.log("MYSQL DB Connected!");
 });
 
-exports.mongoose = mongoose.connect('mongodb://localhost:27017/waya', {
+// exports.mongoose = mongoose.connect('mongodb://localhost:27017/waya', {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true
+// }).then(() => {
+//   console.log('Connected to MongoDB!');
+// }).catch((err) => {
+//   console.error('Error connecting to MongoDB:', err);
+// });
+
+exports.mongoose = mongoose.connect(`mongodb+srv://stephennyamali:${process.env.MONGODB_PASSWORD}@cluster0.q7n495m.mongodb.net/?retryWrites=true&w=majority`, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => {
@@ -82,30 +92,6 @@ exports.transporter = transporter = nodemailer.createTransport({
 
 exports.flw = flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
-//   io.on("connection", (socket) =>{
-//     var drivers;
-//     // username = 'lola';
-//     // client.id = username;
-//     console.log('client connected...', socket.id);
-
-//     //emit is to send, on is to listen
-
-//     //whenever someone disconnects this gets executed, handle disconnect
-//     socket.on('disconnect', function() {
-//     console.log("disconnected");
-//   });
-
-//   socket.on('driverLocation', function(data) {
-//     console.log(data)
-//     io.emit('driverLocation', data);
-//   });
-
-//   socket.on('error', function (err) {
-//     console.log('received error from client:', client.id)
-//     console.log(err)
-//   })
-// });
-
 //bring in routes
 const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
@@ -124,24 +110,7 @@ app.use('/', userDriverActionsRoutes);
 app.use('/', requestRideRoutes);
 app.use('/', depositRoutes);
 
-// const addUsers = async (req, res) => {
-//     //to be requested from user
-//     const { firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID } = req.body;
-
-//     // 
-//     //escaping query values to prevent sql injection
-//     const SQLCOMMAND = `INSERT INTO users(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
-//     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`
-//     var data = [firstname, lastname, password, phoneNumber, email, address, dob, profilePhoto, meansofID];
-
-//     await MySQLConnection.query(SQLCOMMAND, data, (err, results) =>{
-//         if (err) throw err;
-//         res.status(200).send('User added')
-//     });
-// }
-
 app.get('/', (req, res) => {
-  res.json({ info: 'Hello, world' })
+  res.json({ info: 'Welcome to Waya' })
 })
 
-//app.post('/adduser', addUsers);

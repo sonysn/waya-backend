@@ -91,9 +91,27 @@ exports.signup = async (req, res) => {
 
             var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink];
             //sql command to db
-            await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
+            await MySQLConnection.query(SQLCOMMAND, data, async(err, result) => {
                 if (err) console.log(err);
-                return res.json({ message: "Signup success!" });
+
+                let mailOptions = {
+                    from: 'admin@yousellquick.com', // sender address
+                    to: `${email}`, // list of receivers
+                    subject: "Waya Welcome", // Subject line
+                    text: `Hello ${firstname}, Welcome to Waya Driver. Here are a few steps to get you started: 
+                    1. Visit our centers for verification and vehicle checking
+                    2. Sit back and relax
+                    3. Start earning money driving in your commute route
+                    ` // plain text body
+                }
+            
+                await transporter.sendMail(mailOptions, function (err, data) {
+                    if (err) {
+                        console.log("Error " + err);
+                    }
+                });
+
+                return res.sendStatus(200).json({ message: "Signup success!" });
             });
         })
     })

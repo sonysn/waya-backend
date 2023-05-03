@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const paymentSchema = new Schema({
+const paystackPaymentSchema = new Schema({
     role: {
         type: Schema.Types.ObjectId,
         auto: false
@@ -37,5 +37,5 @@ const paymentSchema = new Schema({
     }
 });
 
-const Payment = mongoose.model('Payment', paymentSchema);
-module.exports = { Payment };
+const PaystackDeposits = mongoose.model('PaystackDeposits', paystackPaymentSchema);
+module.exports = { PaystackDeposits };
