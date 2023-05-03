@@ -156,7 +156,7 @@ exports.signin = async (req, res) => {
 
 exports.logout = async (req, res) => {
     const { id } = req.body;
-    const SQLCOMMAND = `UPDATE driver SET DEVICE_REG_TOKEN = NULL WHERE ID = ?;`
+    const SQLCOMMAND = `UPDATE driver SET DEVICE_REG_TOKEN = NULL AND AVAILABILITY = FALSE WHERE ID = ?;`
     MySQLConnection.query(SQLCOMMAND, id, function (err, result){
         if (err){console.log("Logout SQL Error: " + err)}
     });
