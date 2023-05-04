@@ -11,7 +11,7 @@ exports.depositPaystack = async (req, res) => {
     amount,
     reference,
     //TODO: THIS IS NGROK
-    callback_url: `${process.env.HOST}/callback`
+    callback_url: `${process.env.URL_SELF_HOST}/callback`
   };
   paystack.transaction.initialize(params).then((response) => {
     const { authorization_url } = response.data;
