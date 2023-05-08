@@ -97,7 +97,8 @@ const userAuthRoutes = require('./routes/userAuth');
 const userDriverAuthRoutes = require('./routes/userDriverAuth');
 const userDriverActionsRoutes = require('./routes/userDriverActions/userDriverActions');
 const requestRideRoutes = require('./routes/userActions/requestRide');
-const depositRoutes = require('./routes/payments/deposit');
+const depositRoutes = require('./routes/payments/payments_driver');
+const depositRoutes2 = require('./routes/payments/payments_riders');
 
 //middleware
 app.set(sockets());
@@ -109,6 +110,7 @@ app.use('/', userDriverAuthRoutes);
 app.use('/', userDriverActionsRoutes);
 app.use('/', requestRideRoutes);
 app.use('/', depositRoutes);
+app.use('/', depositRoutes2);
 
 app.get('/', (req, res) => {
   res.json({ info: 'Welcome to Waya' })

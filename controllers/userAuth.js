@@ -56,7 +56,7 @@ exports.signup = async (req, res) => {
 }
 
 exports.ValidateSignin = async (req, res, next) => {
-    const { phoneNumber, email, password } = req.body;
+    const { phoneNumber, email, password, deviceID } = req.body;
 
     const SQLCOMMAND = `SELECT * FROM users where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     var data = [phoneNumber, email, password];
@@ -78,10 +78,11 @@ exports.ValidateSignin = async (req, res, next) => {
 }
 
 exports.signin = async (req, res) => {
-    const { phoneNumber, email, password } = req.body;
+    const { phoneNumber, email, password, deviceID } = req.body;
 
     const SQLCOMMAND = `SELECT PASSWORD FROM users where PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
     const SQLCOMMAND1 = `SELECT * FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    const SQLCOMMAND2 = `UPDATE users SET DEVICE_REG_TOKEN = ? WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, results) => {
         //this compares the password of user based on the hashing bcrypt
         bcrypt.compare(password, results[0].PASSWORD, function (err, result) {
@@ -89,6 +90,7 @@ exports.signin = async (req, res) => {
             //res.json(result);
             if (result) {
                 MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
+                    MySQLConnection.query(SQLCOMMAND2, [deviceID, phoneNumber, email], function (err, result) { if (err) console.log('Sign in Command2err: ', err) });
                     //console.log(result[0].PHONE_NUMBER + result[0].ID)
                     const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
                     //this signs the token for route authorization
@@ -101,6 +103,15 @@ exports.signin = async (req, res) => {
         });
     })
 }
+
+exports.logout = async (req, res) => {
+    const { id } = req.body;
+    const SQLCOMMAND = `UPDATE users SET DEVICE_REG_TOKEN = NULL WHERE ID = ?;`
+    MySQLConnection.query(SQLCOMMAND, id, function (err, result){
+        if (err){console.log("Logout SQL Error: " + err)}
+    });
+    res.sendStatus(200);
+};
 
 exports.changePassword = async (req, res) => {
     const { userId, newPassword } = req.body;

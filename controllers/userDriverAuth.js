@@ -157,7 +157,7 @@ exports.signin = async (req, res) => {
             //res.json(result);
             if (result) {
                 MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
-                    MySQLConnection.query(SQLCOMMAND2, [deviceID, phoneNumber, email], function (err, result) { if (err) console.log('Command2err: ', err) });
+                    MySQLConnection.query(SQLCOMMAND2, [deviceID, phoneNumber, email], function (err, result) { if (err) console.log('Sign in Command2err: ', err) });
                     const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
                     //this signs the token for route authorization
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
