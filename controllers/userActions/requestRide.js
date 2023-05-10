@@ -6,6 +6,37 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+exports.getPrice = async (req, res) => {
+  const { pickupLocationPosition, dropoffLocationPostion } = req.body;
+
+  console.log('pickup: ', pickupLocationPosition);
+  console.log('dropoff: ', dropoffLocationPostion);
+  //var distance  = dist.getDistance(dropoffLocationPostion[0], dropoffLocationPostion[1], pickupLocationPosition[0], pickupLocationPosition[1]);
+
+  const lat1 = dropoffLocationPostion[0]
+  const lon1 = dropoffLocationPostion[1]
+  const lat2 = pickupLocationPosition[0]
+  const lon2 = pickupLocationPosition[1]
+
+  const R = 6371e3; // Earth's radius in meters
+  const phi1 = lat1 * Math.PI / 180; // convert degrees to radians
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+          Math.cos(phi1) * Math.cos(phi2) *
+          Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  const d = R * c; // distance in meters
+
+
+  console.log('distance: ', d);
+
+  const price = 0.09 * d; // 0.09 naira per kilometer
+  console.log('price: ', price);
+};
 
 exports.requestRide = async (req, res, next) => {
   const { userId, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
@@ -129,9 +160,18 @@ exports.searchForDrivers = async (req, res) => {
       // const driversocket = connectedUsers.getSocket(driverid);
       // //console.log(req.body);
       // io.to(driversocket).emit("ridenotifications", req.body);
-      res.json({ result });
+      //res.json({ result });
     }
   });
+};
+
+exports.driverAcceptRide = async (req, res) => {
+  const { riderID } = req.body;
+  const whoRequested = "Rider"
+  const riderid = whoRequested + riderID;
+  console.log(riderid);
+  const riderSocket = connectedUsers.getSocket(riderid);
+  io.to(riderSocket).emit("acceptedRide?", req.body);
 };
 
 
