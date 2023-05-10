@@ -4,7 +4,7 @@ const { ensureToken } = require('../../controllers/userAuth');
 
 const router = express.Router();
 
-router.post('/requestride', ensureToken, getPrice);
+router.post('/requestride', ensureToken, requestRide, searchForDrivers);
 router.post('/getRidePrice', getPrice);
 router.get('/:userId/getridehistory', ensureToken, getTripsHistory);
 router.post('/driverAcceptRide', driverAcceptRide);
