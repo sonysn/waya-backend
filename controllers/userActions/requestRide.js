@@ -181,7 +181,7 @@ exports.driverCount = async (req, res) => {
 ) as distance FROM driver WHERE AVAILABILITY = true
 ) AS LOCATION WHERE distance < 10000`;
   await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
-    if (err) res.json(0);
+    if (err) {res.json(0);}
     console.log(result.length);
     res.json(result.length);
    });
