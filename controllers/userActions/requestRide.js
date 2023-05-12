@@ -174,19 +174,32 @@ exports.driverAcceptRide = async (req, res) => {
 
 exports.driverCount = async (req, res) => {
   const currentLocationUser = req.params.locationData;
-  SQLCOMMAND = `SELECT ID FROM (
+  const SQLCOMMAND = `SELECT ID FROM (
     SELECT *, ST_Distance_Sphere(
-    point(${currentLocationUser}),
-    CURRENT_LOCATION
-) as distance FROM driver WHERE AVAILABILITY = true
-) AS LOCATION WHERE distance < 10000`;
-  await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
-    if (err) {res.json(0);}
+      point(${currentLocationUser}),
+      CURRENT_LOCATION
+    ) as distance FROM driver WHERE AVAILABILITY = true
+  ) AS LOCATION WHERE distance < 10000`;
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      MySQLConnection.query(SQLCOMMAND, (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
+    });
+
     console.log(result.length);
     res.json(result.length);
-   });
-
+  } catch (err) {
+    console.error(err);
+    res.json(0);
+  }
 };
+
 
 
 //WEBSOCKET REQUESTS BELOW HERE
