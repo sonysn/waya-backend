@@ -44,7 +44,7 @@ exports.tranferUserstoDrivers = async (req, res) => {
     });
 
 };
-//TODO ADD ACCOUNT_BALANCE TO users table done?
+
 exports.tranferUserstoOtherUsers = async (req, res) => {
     const { amountToBeTransferred, userReceivingPhoneNumber, userSendingPhoneNumber } = req.body;
 

@@ -24,25 +24,24 @@ exports.getPrice = async (req, res) => {
   const deltaPhi = (lat2 - lat1) * Math.PI / 180;
   const deltaLambda = (lon2 - lon1) * Math.PI / 180;
 
-  const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
-          Math.cos(phi1) * Math.cos(phi2) *
-          Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) *
+    Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   const d = R * c; // distance in meters
 
 
   console.log('distance: ', d);
 
-  const price = 0.09 * d; // 0.09 naira per kilometer
+  const price = process.env.PRICE_PER_DISTANCE * d; // 0.09 naira per kilometer
   console.log('price: ', price);
+  res.json(price);
 };
 
 exports.requestRide = async (req, res, next) => {
-  const { userId, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
+  const { userId, pickupLocation, dropoffLocation, estFare, pickupLocationPosition,
     dropoffLocationPostion, status } = req.body;
-  //TODO TESTING OUT SOMETHING
-  req.surges = surge;
 
   //get todays date and parse it for sql db
   const today = new Date();
@@ -54,13 +53,14 @@ exports.requestRide = async (req, res, next) => {
   // requestTime = Time.getTime();
   //TODO: CHANGES TO requested_rides instead of requested_ridesl
   //FIXME: STORE INFO ONLY WHEN RIDE IS REQUESTED SUCCESSFULLY
-  SQLCOMMAND = `INSERT INTO requested_ridesl(USER_ID, REQUEST_DATE, REQUEST_TIME, PICKUP_LOCATION, DROPOFF_LOCATION, EST_FARE, SURGE, 
-        PICKUP_LOCATION_POSITION, DROP_OFF_LOCATION_POSTITION, STATUS) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  var data = [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, surge, pickupLocationPosition,
+  SQLCOMMAND = `INSERT INTO requested_ridesl(USER_ID, REQUEST_DATE, REQUEST_TIME, PICKUP_LOCATION, DROPOFF_LOCATION, EST_FARE, 
+        PICKUP_LOCATION_POSITION, DROP_OFF_LOCATION_POSTITION, STATUS) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  var data = [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, pickupLocationPosition,
     dropoffLocationPostion, status];
 
   await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
     //res.json({ requestTime, message: "Trip requested" });
+    console.log(req.body)
     next();
   });
 }
@@ -92,10 +92,6 @@ exports.searchForDrivers = async (req, res) => {
     dropoffLocationPostion,
     status,
   } = req.body;
-  //TODO TESTING OUT SOMETHING
-  const st = req.surges;
-  req.body.st = st;
-  console.log('this is st: ', st);
 
   SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING, DEVICE_REG_TOKEN FROM (
         SELECT *, ST_Distance_Sphere(
@@ -116,8 +112,8 @@ exports.searchForDrivers = async (req, res) => {
         //message to driver device even when app is killed
         const message = {
           notification: {
-            title: 'Message from Node.js',
-            body: `The current time is for me`,
+            //title: 'Message from Node.js',
+            title: `Someone is requesting a ride from ${pickupLocation}`
           },
           token: result[i]["DEVICE_REG_TOKEN"],
         };
@@ -172,6 +168,24 @@ exports.driverAcceptRide = async (req, res) => {
   console.log(riderid);
   const riderSocket = connectedUsers.getSocket(riderid);
   io.to(riderSocket).emit("acceptedRide?", req.body);
+  //when the driver accepts ride, write a code to keep checking the driver location and when it is close to the 
+  //users location, send a notification to the user that the driver has arrived
+};
+
+exports.driverCount = async (req, res) => {
+  const currentLocationUser = req.params.locationData;
+  SQLCOMMAND = `SELECT ID FROM (
+    SELECT *, ST_Distance_Sphere(
+    point(${currentLocationUser}),
+    CURRENT_LOCATION
+) as distance FROM driver WHERE AVAILABILITY = true
+) AS LOCATION WHERE distance < 10000`;
+  await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+    if (err) res.json(0);
+    console.log(result.length);
+    res.json(result.length);
+   });
+
 };
 
 

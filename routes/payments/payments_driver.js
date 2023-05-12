@@ -9,7 +9,7 @@ router.get('/deposit', deposit);
 router.post('/validatecharge', validateCharge)
 
 //paystack routes
-router.post('/charge', depositPaystack);
+router.post('/chargeDriver', depositPaystack);
 router.get('/callbackdriver', callbackPaystack);
 
 //getbalance

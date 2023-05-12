@@ -66,9 +66,9 @@ exports.callbackPaystack = async (req, res) => {
 
 
     if (status === 'success') {
-      // This code queries the 'driver' table in the MySQL database for the ACCOUNT_BALANCE column, based on the email provided in the 'response' object. If an error occurs during the query, it is logged to the console.
+      // This code queries the 'user' table in the MySQL database for the ACCOUNT_BALANCE column, based on the email provided in the 'response' object. If an error occurs during the query, it is logged to the console.
       // The retrieved ACCOUNT_BALANCE value is used to calculate a new balance by adding the amount in the 'response' object, which is divided by 100 to convert from kobo to naira.
-      // A new query is then executed to update the ACCOUNT_BALANCE value in the 'driver' table, based on the email provided in the 'response' object. If an error occurs during the update, it is logged to the console.
+      // A new query is then executed to update the ACCOUNT_BALANCE value in the 'user' table, based on the email provided in the 'response' object. If an error occurs during the update, it is logged to the console.
       // The new balance is logged to the console.
       //TODO CHANGE TO PHONE
       const SQLCOMMAND = `SELECT ACCOUNT_BALANCE FROM users WHERE EMAIL LIKE ?;`
