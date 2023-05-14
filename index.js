@@ -61,26 +61,6 @@ exports.io = io = new Server(httpServer, {
   },
 });
 
-var f = (req, res) => {
-
-  // Access text data from form
-  const textData = req.body.textData;
-
-  // Access uploaded file information
-  const fileData = req.files['image'][0];
-
-  if (!fileData) {
-    return res.status(400).send("No file uploaded.");
-  }
-
-  console.log("Image uploaded: " + fileData.filename + " by " + textData);
-  return res.status(200).send("Image uploaded.");
-}
-// Define route for image upload
-app.post("/api/upload-image",upload.fields([
-  { name: 'image' },
-  { name: 'textData' }
-]), f)
 exports.transporter = transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: process.env.EMAIL_PORT,
