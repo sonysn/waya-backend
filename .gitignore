@@ -1,2 +1,3 @@
 .env
 waya-firebase-servicekey.json
+node_modules
