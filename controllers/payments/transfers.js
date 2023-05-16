@@ -1,9 +1,11 @@
 const { MySQLConnection } = require('../../index');
+const { DebitToDriver, DebitToOtherUsers } = require('../../models/transfers');
+const { info, errormessage } = require('./../../ansi-colors-config')
 
 exports.tranferUserstoDrivers = async (req, res) => {
     const { amountToBeTransferred, driverPhoneNumber, userPhoneNumber } = req.body;
 
-    const SQLCOMMAND = `SELECT ACCOUNT_BALANCE FROM users WHERE PHONE_NUMBER LIKE ?;`
+    const SQLCOMMAND = `SELECT ACCOUNT_BALANCE, ID FROM users WHERE PHONE_NUMBER LIKE ?;`
     MySQLConnection.query(SQLCOMMAND, userPhoneNumber, function (err, result) {
         if (err) {
             console.error(err);
@@ -16,8 +18,10 @@ exports.tranferUserstoDrivers = async (req, res) => {
             return;
         }
 
+        const userID = result[0].ID;
+
         // Check if driver exists
-        const SQLCOMMAND1 = `SELECT ACCOUNT_BALANCE FROM driver WHERE PHONE_NUMBER LIKE ?;`
+        const SQLCOMMAND1 = `SELECT ACCOUNT_BALANCE, ID FROM driver WHERE PHONE_NUMBER LIKE ?;`
         MySQLConnection.query(SQLCOMMAND1, driverPhoneNumber, function (err, result) {
             if (err) {
                 console.error(err);
@@ -28,16 +32,40 @@ exports.tranferUserstoDrivers = async (req, res) => {
                 res.status(404).json({ status: 404, message: 'No driver found.' });
                 return;
             }
+            const driverID = result[0].ID;
             const driverAccountBalance = result[0].ACCOUNT_BALANCE;
             const value = amountToBeTransferred;
+            const newUserBalance = accountBalance - value;
             const new_value = driverAccountBalance + value;
-            const SQLCOMMAND2 = `UPDATE driver SET ACCOUNT_BALANCE LIKE ? WHERE PHONE_NUMBER LIKE ?;`
-            MySQLConnection.query(SQLCOMMAND2, [new_value, driverPhoneNumber], function (err, result) {
+            const SQLCOMMAND2 = `UPDATE driver SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?; UPDATE users SET ACCOUNT_BALANCE = ? WHERE ID = ?;`
+
+            //SAVE TRANSACTION TO MONGO
+            //get todays date and parse it for sql db
+            const today = new Date();
+            //month goes from 0 to 11
+            var month = today.getMonth() + 1;
+            const todaysDate = today.getDate() + '-' + month + '-' + today.getFullYear();
+
+            const requestTime = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
+
+            const parsedPayment = {
+                userID: userID,
+                driverID: driverID,
+                amountTransferred: value,
+                datePaid: todaysDate,
+                timePaid: requestTime,
+            }
+
+            MySQLConnection.query(SQLCOMMAND2, [new_value, driverPhoneNumber, newUserBalance, userID], function (err, result) {
                 if (err) {
-                    console.error(err);
+                    console.error(errormessage(err));
                     res.status(500).json({ status: 500, message: 'An error occurred while processing your request.' });
                     return;
                 }
+                const payment = new DebitToDriver(parsedPayment);
+                payment.save()
+                    .then(() => console.log(info('Payment saved to database')))
+                    .catch(error => console.error(errormessage(error)));
                 res.json({ status: 200, message: 'Transaction Complete' });
             });
         });
@@ -45,10 +73,11 @@ exports.tranferUserstoDrivers = async (req, res) => {
 
 };
 
+//FIXME
 exports.tranferUserstoOtherUsers = async (req, res) => {
     const { amountToBeTransferred, userReceivingPhoneNumber, userSendingPhoneNumber } = req.body;
 
-    const SQLCOMMAND = `SELECT ACCOUNT_BALANCE FROM users WHERE PHONE_NUMBER LIKE ?;`
+    const SQLCOMMAND = `SELECT ACCOUNT_BALANCE, ID FROM users WHERE PHONE_NUMBER LIKE ?;`
     MySQLConnection.query(SQLCOMMAND, userSendingPhoneNumber, function (err, result) {
         if (err) {
             console.error(err);
@@ -61,8 +90,10 @@ exports.tranferUserstoOtherUsers = async (req, res) => {
             return;
         }
 
+        const userSendingID = result[0].ID;
+
         // Check if user exists
-        const SQLCOMMAND1 = `SELECT ACCOUNT_BALANCE FROM users WHERE PHONE_NUMBER LIKE ?;`
+        const SQLCOMMAND1 = `SELECT ACCOUNT_BALANCE, ID FROM users WHERE PHONE_NUMBER LIKE ?;`
         MySQLConnection.query(SQLCOMMAND1, userReceivingPhoneNumber, function (err, result) {
             if (err) {
                 console.error(err);
@@ -73,16 +104,41 @@ exports.tranferUserstoOtherUsers = async (req, res) => {
                 res.status(404).json({ status: 404, message: 'No User found.' });
                 return;
             }
+
+            const userReceivingID = result[0].ID;
             const userReceivingAccountBalance = result[0].ACCOUNT_BALANCE;
             const value = amountToBeTransferred;
             const new_value = userReceivingAccountBalance + value;
             const SQLCOMMAND2 = `UPDATE users SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?;`
+
+            //SAVE TRANSACTION TO MONGO
+            //get todays date and parse it for sql db
+            const today = new Date();
+            //month goes from 0 to 11
+            var month = today.getMonth() + 1;
+            const todaysDate = today.getDate() + '-' + month + '-' + today.getFullYear();
+
+            const requestTime = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
+
+            const parsedPayment = {
+                userSendingID: userSendingID,
+                userReceivingID: userReceivingID,
+                amountTransferred: value,
+                datePaid: todaysDate,
+                timePaid: requestTime,
+            }
+
+
             MySQLConnection.query(SQLCOMMAND2, [new_value, userReceivingPhoneNumber], function (err, result) {
                 if (err) {
                     console.error(err);
                     res.status(500).json({ status: 500, message: 'An error occurred while processing your request.' });
                     return;
                 }
+                const payment = new DebitToOtherUsers(parsedPayment);
+                payment.save()
+                    .then(() => console.log(info('Payment saved to database')))
+                    .catch(error => console.error(errormessage(error)));
                 res.json({ status: 200, message: 'Transaction Complete' });
             });
         });
@@ -142,6 +198,7 @@ exports.tranferDriverstoOtherDrivers = async (req, res) => {
             const new_value = userReceivingAccountBalance + value;
             const new_balance_forSender = accountBalance - value;
             const SQLCOMMAND2 = `UPDATE driver SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?;`
+            //FIXME PUT THESE INTO ONE COMMAND
             MySQLConnection.query(SQLCOMMAND2, [new_value, driverReceivingPhoneNumber], function (err, result) {
                 if (err) {
                     console.error(err);
@@ -149,7 +206,7 @@ exports.tranferDriverstoOtherDrivers = async (req, res) => {
                     return;
                 }
                 // Update the account balance of the driver sending the funds.
-                MySQLConnection.query(SQLCOMMAND2, [new_balance_forSender, driverSendingPhoneNumber], function (err, result) {});
+                MySQLConnection.query(SQLCOMMAND2, [new_balance_forSender, driverSendingPhoneNumber], function (err, result) { });
                 // Return a success message.
                 res.json({ status: 200, message: 'Transaction Complete' });
             });

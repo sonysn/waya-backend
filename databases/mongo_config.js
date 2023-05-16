@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { error, info } = require('../ansi-colors-config');
+const { errormessage, info } = require('../ansi-colors-config');
 
 
 function mongoConnect() {
@@ -9,7 +9,7 @@ function mongoConnect() {
     }).then(() => {
         console.log(info('Connected to MongoDB!'));
     }).catch((err) => {
-        console.error(error(`'Error connecting to MongoDB: ${err}`));
+        console.error(errormessage(`'Error connecting to MongoDB: ${err}`));
     });
 }
 

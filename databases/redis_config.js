@@ -1,6 +1,6 @@
 const redis = require('redis');
 const dotenv = require('dotenv');
-const { error, info } = require('../ansi-colors-config');
+const { errormessage, info } = require('../ansi-colors-config');
 dotenv.config();
 const client = redis.createClient({url: process.env.REDIS_LOCAL_URL || process.env.REDIS_RENDER_URL});
 
@@ -10,7 +10,7 @@ client.on('connect', function() {
   });
 
 client.on('error', function(err) {
-  console.error(error(`'Redis error: ${err}`));
+  console.error(errormessage('Redis error:' + err));
 });
 
 module.exports = client;
