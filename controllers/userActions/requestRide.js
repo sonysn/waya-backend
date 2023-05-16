@@ -1,5 +1,7 @@
 const admin = require('firebase-admin');
 const serviceAccount = require('../../waya-firebase-servicekey.json');
+const redisClient = require('../../databases/redis_config');
+const { warning, info, errormessage } = require('../../ansi-colors-config');
 
 //initialize the service account
 admin.initializeApp({
@@ -93,72 +95,107 @@ exports.searchForDrivers = async (req, res) => {
     status,
   } = req.body;
 
-  SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING, DEVICE_REG_TOKEN FROM (
-        SELECT *, ST_Distance_Sphere(
-        point(${pickupLocationPosition}),
-        CURRENT_LOCATION
-    ) as distance FROM driver WHERE AVAILABILITY = true
-    ) AS LOCATION WHERE distance < 10000`;
+  // SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING, DEVICE_REG_TOKEN FROM (
+  //       SELECT *, ST_Distance_Sphere(
+  //       point(${pickupLocationPosition}),
+  //       CURRENT_LOCATION
+  //   ) as distance FROM driver WHERE AVAILABILITY = true
+  //   ) AS LOCATION WHERE distance < 10000`;
 
-  await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json("Internal server error");
-    } else if (result.length === 0) {
-      res.status(404).json("No drivers available");
-    } else {
+  console.log(pickupLocationPosition);
 
-      for (let i = 0; i < result.length; i++) {
-        //message to driver device even when app is killed
-        const message = {
-          notification: {
-            //title: 'Message from Node.js',
-            title: `Someone is requesting a ride from ${pickupLocation}`
-          },
-          token: result[i]["DEVICE_REG_TOKEN"],
-        };
+  const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, 10, 'km');
 
-        //send message to driver
-        admin.messaging().send(message)
-          .then((response) => {
-            console.log('Successfully sent message:', response);
-          })
-          .catch((error) => {
-            console.error('Error sending message:', error);
-          });
+  if (reply.length == 0) {
+    res.status(404).json("No drivers available");
+  }
 
-        // console.log('this is i:', i)
-        const who = "Driver";
-        const driverid = who + JSON.stringify(result[i]["ID"]);
-        //console.log(driverid);
-        //console.log(result[i]["DEVICE_REG_TOKEN"]);
-        const driversocket = connectedUsers.getSocket(driverid);
-        //console.log(req.body);
-        io.to(driversocket).emit("ridenotifications", req.body);
+  for (let i = 0; i < reply.length; i++) {
+    const response = JSON.parse(reply[i]);
+    const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`)
+    //console.log(getOnlineDriverWhoAreVerifiedOnly)
+    if (getOnlineDriverWhoAreVerifiedOnly) {
+      if (response.verified == true) {
+        SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
+        await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+          if (err) {
+            console.log(errormessage(`MYSQL ERROR: ${err}`));
+            res.status(500).json("Internal server error");
+          } else {
+            //message to driver device even when app is killed
+            const message = {
+              notification: {
+                //title: 'Message from Node.js',
+                title: `Someone is requesting a ride from ${pickupLocation}`
+              },
+              token: result[0]["DEVICE_REG_TOKEN"],
+            };
+
+            //send message to driver
+            admin.messaging().send(message)
+              .then((response) => {
+                console.log(info(`Successfully sent message: ${response}`));
+              })
+              .catch((error) => {
+                console.error(errormessage(`Failed to send message: ${error}`));
+              });
+
+            const who = "Driver";
+            const driverid = who + response.driverID;
+
+            const driversocket = connectedUsers.getSocket(driverid);
+            //console.log(req.body);
+            io.to(driversocket).emit("ridenotifications", req.body);
+          }
+        }
+        );
+
       }
-      // const who = "Driver";
-      // const driverid = who + JSON.stringify(result[0]["ID"]);
-      // console.log(driverid);
-
-      // Check if driver already exists in array
-      // if (!DriverFound.includes(driverid)) {
-      //   DriverFound.push(driverid);
-
-      //   const index = connectedUsersIDs.indexOf(DriverFound[0]);
-      //   const driversocket = connectedUsersSocketIDs[index];
-
-      //   io.to(driversocket).emit("ridenotifications", req.body);
-      //   DriverFound.length = 0;
-
-      //   console.log(driversocket);
-      //   console.log(index);
-      // }
-      // const driversocket = connectedUsers.getSocket(driverid);
-      // //console.log(req.body);
-      // io.to(driversocket).emit("ridenotifications", req.body);
-      //res.json({ result });
+      else {
+        res.status(404).json("No drivers available");
+      }
+    } else {
+      console.log(warning("No drivers available"));
+      res.status(404).json("No drivers available");
     }
-  });
+  }
+
+  // await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+  //   if (err) {
+  //     console.log(err);
+  //     res.status(500).json("Internal server error");
+  //   } else if (result.length === 0) {
+  //     res.status(404).json("No drivers available");
+  //   } else {
+
+  //     for (let i = 0; i < result.length; i++) {
+  //       //message to driver device even when app is killed
+  //       const message = {
+  //         notification: {
+  //           //title: 'Message from Node.js',
+  //           title: `Someone is requesting a ride from ${pickupLocation}`
+  //         },
+  //         token: result[i]["DEVICE_REG_TOKEN"],
+  //       };
+
+  //       //send message to driver
+  //       admin.messaging().send(message)
+  //         .then((response) => {
+  //           console.log('Successfully sent message:', response);
+  //         })
+  //         .catch((error) => {
+  //           console.error('Error sending message:', error);
+  //         });
+
+  //       const who = "Driver";
+  //       const driverid = who + JSON.stringify(result[i]["ID"]);
+
+  //       const driversocket = connectedUsers.getSocket(driverid);
+  //       //console.log(req.body);
+  //       io.to(driversocket).emit("ridenotifications", req.body);
+  //     }
+  //   }
+  // });
 };
 
 exports.driverAcceptRide = async (req, res) => {
@@ -174,55 +211,74 @@ exports.driverAcceptRide = async (req, res) => {
 
 exports.driverCount = async (req, res) => {
   const currentLocationUser = req.params.locationData;
-  const SQLCOMMAND = `SELECT ID FROM (
-    SELECT *, ST_Distance_Sphere(
-      point(${currentLocationUser}),
-      CURRENT_LOCATION
-    ) as distance FROM driver WHERE AVAILABILITY = true
-  ) AS LOCATION WHERE distance < 10000`;
+  const currentLocationArray = currentLocationUser.split(' ');
+  const outputLoc = currentLocationArray.map(item => item.replace(',', ''));
+  //FIXME GET REDIS TO DELETE LOCATION
+  // const SQLCOMMAND = `SELECT ID FROM (
+  //   SELECT *, ST_Distance_Sphere(
+  //     point(${currentLocationUser}),
+  //     CURRENT_LOCATION
+  //   ) as distance FROM driver WHERE AVAILABILITY = true
+  // ) AS LOCATION WHERE distance < 10000`;
+  const reply = await redisClient.geoRadius('driverLocations', { longitude: outputLoc[1], latitude: outputLoc[0] }, 10, 'km');
 
-  try {
-    const result = await new Promise((resolve, reject) => {
-      MySQLConnection.query(SQLCOMMAND, (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
+  var driverCount = 0;
 
-    console.log(result.length);
-    res.json(result.length);
-  } catch (err) {
-    console.error(err);
-    res.json(0);
+  for (i = 0; i < reply.length; i++) {
+    const fromReply = JSON.parse(reply[i]);
+    if (fromReply.verified == true) {
+      const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${fromReply.driverID}`)
+      if (getOnlineDriverWhoAreVerifiedOnly) {
+        driverCount++;
+      }
+    }
   }
+
+
+  // try {
+  //   const result = await new Promise((resolve, reject) => {
+  //     MySQLConnection.query(SQLCOMMAND, (err, result) => {
+  //       if (err) {
+  //         reject(err);
+  //       } else {
+  //         resolve(result);
+  //       }
+  //     });
+  //   });
+
+  //   console.log(result.length);
+  //   res.json(result.length);
+  // } catch (err) {
+  //   console.error(err);
+  //   res.json(0);
+  // }
+  res.json(driverCount);
 };
 
 
 
+//NO USE OF THIS FUNCTION
 //WEBSOCKET REQUESTS BELOW HERE
 //websocket request
 //this just returns the number of users in 10km range of the user
-exports.searchForDriversWT = (pickupLocationPosition) => {
-  SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING FROM (
-      SELECT *, ST_Distance_Sphere(
-      point(${pickupLocationPosition}),
-      CURRENT_LOCATION
-  ) as distance FROM driver WHERE AVAILABILITY = true
-  ) AS LOCATION WHERE distance < 10000`;
-  //10000 is 10km range
-  MySQLConnection.query(SQLCOMMAND, (err, result) => {
-    if (err) {
-      console.log(err);
-      //res.status(500).json({ error: "internal server error" });
-    } else if (result.length === 0) {
-      const data = "No drivers available";
-      io.emit('driverInfoVicinity', data);
-      //res.json({ result });
-    } else {
-      io.emit('driverInfoVicinity', result.length);
-    }
-  })
-}
+// exports.searchForDriversWT = (pickupLocationPosition) => {
+//   SQLCOMMAND = `SELECT ID, FIRST_NAME, LAST_NAME, PHONE_NUMBER, PROFILE_PHOTO, RATING FROM (
+//       SELECT *, ST_Distance_Sphere(
+//       point(${pickupLocationPosition}),
+//       CURRENT_LOCATION
+//   ) as distance FROM driver WHERE AVAILABILITY = true
+//   ) AS LOCATION WHERE distance < 10000`;
+//   //10000 is 10km range
+//   MySQLConnection.query(SQLCOMMAND, (err, result) => {
+//     if (err) {
+//       console.log(err);
+//       //res.status(500).json({ error: "internal server error" });
+//     } else if (result.length === 0) {
+//       const data = "No drivers available";
+//       io.emit('driverInfoVicinity', data);
+//       //res.json({ result });
+//     } else {
+//       io.emit('driverInfoVicinity', result.length);
+//     }
+//   })
+// }
