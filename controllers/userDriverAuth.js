@@ -3,6 +3,7 @@ const { imagekit } = require('../databases/imagekit_config');
 const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
 const multer = require("multer");
+const { info, errormessage, warning } = require('../ansi-colors-config');
 //const saltRounds = 10;
 const delay = time => new Promise(res => setTimeout(res, time));
 
@@ -39,7 +40,7 @@ const uploadStructure = async function (fileinfo, folderD) {
     }).then(res => {
         reply = res.url;
     }).catch(error => {
-        console.log(error);
+        console.log(errormessage(error));
     })
     //This returns the url of the saved file
     return reply;
@@ -92,7 +93,7 @@ exports.signup = async (req, res) => {
             var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink];
             //sql command to db
             await MySQLConnection.query(SQLCOMMAND, data, async(err, result) => {
-                if (err) console.log(err);
+                if (err) console.log(errormessage(err));
 
                 let mailOptions = {
                     from: 'admin@yousellquick.com', // sender address
@@ -107,7 +108,7 @@ exports.signup = async (req, res) => {
             
                 await transporter.sendMail(mailOptions, function (err, data) {
                     if (err) {
-                        console.log("Error " + err);
+                        console.log(errormessage(`Mailer Error: ${err}`));
                     }
                 });
 
@@ -151,13 +152,13 @@ exports.signin = async (req, res) => {
     await MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
         //res.json(result[0].PASSWORD);
         //console.log(password)
-        if (err) console.log(err);
+        if (err) console.log(errormessage(err));
         bcrypt.compare(password, result[0].PASSWORD, function (err, result) {
             // console.log(result);
             //res.json(result);
             if (result) {
                 MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], function (err, result) {
-                    MySQLConnection.query(SQLCOMMAND2, [deviceID, phoneNumber, email], function (err, result) { if (err) console.log('Sign in Command2err: ', err) });
+                    MySQLConnection.query(SQLCOMMAND2, [deviceID, phoneNumber, email], function (err, result) { if (err) console.log(errormessage(`Sign in Command2 err: ${err}`)) });
                     const TokenSignData = result[0].PHONE_NUMBER + result[0].ID;
                     //this signs the token for route authorization
                     const token = jsonwebtoken.sign(TokenSignData, process.env.JWT_SECRET)
@@ -176,7 +177,7 @@ exports.logout = async (req, res) => {
     const { id } = req.body;
     const SQLCOMMAND = `UPDATE driver SET DEVICE_REG_TOKEN = NULL AND AVAILABILITY = FALSE WHERE ID = ?;`
     MySQLConnection.query(SQLCOMMAND, id, function (err, result){
-        if (err){console.log("Logout SQL Error: " + err)}
+        if (err){console.log(errormessage(`Logout SQL Error: ${err}`))}
     });
     res.sendStatus(200);
 };
@@ -210,7 +211,7 @@ exports.genEmailToken = async (req, res) => {
 
     await transporter.sendMail(mailOptions, function (err, data) {
         if (err) {
-            console.log("Error " + err);
+            console.log(errormessage(`Mailer Error: ${err}`));
         } else {
             //console.log("Email sent successfully");
             res.json({ message: "Email Sent! Check your email" })

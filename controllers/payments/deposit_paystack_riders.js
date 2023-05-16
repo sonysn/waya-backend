@@ -2,6 +2,7 @@ const bodyParser = require('body-parser');
 const paystack = require('paystack')(process.env.PAYSTACK_SECRET_KEY);
 const { PaystackDepositsRiders } = require('../../models/paystack_deposit_riders');
 const { MySQLConnection } = require('../../index');
+const { info, errormessage } = require('../../ansi-colors-config');
 
 exports.depositPaystack = async (req, res) => {
   const { userID, phone, email, amount, reference } = req.body;
@@ -18,7 +19,7 @@ exports.depositPaystack = async (req, res) => {
     const { authorization_url } = response.data;
     res.json({ authorization_url });
   }).catch((error) => {
-    console.log(error);
+    console.log(errormessage(error));
     res.status(500).json({ error: 'An error occurred while processing your payment.' });
   });
 };
@@ -29,7 +30,7 @@ exports.callbackPaystack = async (req, res) => {
   paystack.transaction.verify(reference).then((response) => {
     const { status } = response.data;
     //console.log(response)
-   
+
     //to save in mongo
     const parsedPayment = {
       userID: response.data.metadata.userID,
@@ -61,7 +62,7 @@ exports.callbackPaystack = async (req, res) => {
 
     const payment = new PaystackDepositsRiders(parsedPayment);
     payment.save()
-      .then(() => console.log('Data saved to database'))
+      .then(() => console.log(info('Data saved to database')))
       .catch(error => console.error(error));
 
 
@@ -97,13 +98,13 @@ exports.callbackPaystack = async (req, res) => {
       res.status(500).json({ error: 'Your payment failed.' });
     }
   }).catch((error) => {
-    console.log(error);
+    console.log(errormessage(error));
     res.status(500).json({ error: 'An error occurred while processing your payment.' });
   });
 };
 
 // Define the getBalance function
-exports.getBalance = function(req, res) {
+exports.getBalance = function (req, res) {
   const id = req.body.id;
   const phoneNumber = req.body.phoneNumber;
 
@@ -112,7 +113,7 @@ exports.getBalance = function(req, res) {
   const values = [id, phoneNumber];
 
   // Execute the query using the connection pool
-  MySQLConnection.query(query, values, function(err, result) {
+  MySQLConnection.query(query, values, function (err, result) {
     if (err) {
       console.error('Error executing query:', err);
       res.status(500).send('Internal server error');

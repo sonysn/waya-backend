@@ -108,7 +108,7 @@ exports.logout = async (req, res) => {
     const { id } = req.body;
     const SQLCOMMAND = `UPDATE users SET DEVICE_REG_TOKEN = NULL WHERE ID = ?;`
     MySQLConnection.query(SQLCOMMAND, id, function (err, result){
-        if (err){console.log("Logout SQL Error: " + err)}
+        if (err){console.log(errormessage(`Logout SQL Error: ${err}`))}
     });
     res.sendStatus(200);
 };
@@ -180,7 +180,7 @@ exports.genEmailToken = async (req, res) => {
 
     await transporter.sendMail(mailOptions, function (err, data) {
         if (err) {
-            console.log("Error " + err);
+            console.log(errormessage(`Mailer Error: ${err}`));
         } else {
             //console.log("Email sent successfully");
             res.json({ message: "Email Sent! Check your email" })

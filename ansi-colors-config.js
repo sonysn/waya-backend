@@ -1,6 +1,6 @@
 const ansicolors = require('ansi-colors');
 
-const error = ansicolors.red;
+const errormessage = ansicolors.red;
 const warning = ansicolors.yellow;
 const info = ansicolors.blue; 
 
@@ -9,5 +9,5 @@ const info = ansicolors.blue;
 // console.log(warning('Warning'));
 // console.log(info('Info'));
 
-module.exports = { error, warning, info };
+module.exports = { errormessage, warning, info };
 

@@ -1,5 +1,6 @@
 //const { searchForDriversWT, DriverFound, reqBody } = require('./controllers/userActions/requestRide');
 const { locationUpdateWT } = require('./controllers/userDriverActions/userDriverAction');
+const { info, errormessage, warning } = require('./ansi-colors-config');
 
 exports.connectedUsersSocketIDs = connectedUsersSocketIDs = [];
 exports.connectedUsersIDs = connectedUsersIDs = [];
@@ -124,7 +125,7 @@ exports.sockets = function sockets() {
 
 
         //connectedUsersSocketIDs.push(socket.id);
-        console.log('client connected...', socket.id);
+        console.log(info(`client connected..., ${socket.id}`));
 
         //emit is to send, on is to listen
 
@@ -147,7 +148,7 @@ exports.sockets = function sockets() {
             //     connectedUsersIDs.splice(index2, 1);
             // }
             connectedUsers.remove(socket.id);
-            console.log("disconnected");
+            console.log(info("disconnected"));
         });
 
         //this function gets location cordinates and id and pushes it to server in real time
@@ -174,8 +175,8 @@ exports.sockets = function sockets() {
         });
 
         socket.on('error', function (err) {
-            console.log('received error from client:', client.id)
-            console.log(err)
+            console.log(warning(`Received error from client: ${client.id}`))
+            console.log(errormessage(err))
         })
     });
 
