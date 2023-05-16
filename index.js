@@ -1,21 +1,25 @@
 const express = require('express');
-var mysql = require('mysql');
+const mysql = require('mysql');
 const bodyParser = require('body-parser');
 const expressValidator = require('express-validator');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const nodemailer = require("nodemailer");
 const Flutterwave = require('flutterwave-node-v3');
-const mongoose = require('mongoose');
 const { sockets } = require('./sockets');
 const { upload } = require('./databases/upload_config');
+const redisClient = require('./databases/redis_config');
+const { mongoConnect } = require('./databases/mongo_config');
+const { info } = require('./ansi-colors-config');
 dotenv.config();
 
 
 const app = express();
+redisClient.connect();
+mongoConnect();
 
-//exporting this for various purposes
-//TODO WATCH THIS
+// //exporting this for various purposes
+// //TODO WATCH THIS
 exports.MySQLConnection = MySQLConnection = mysql.createPool({
   host: process.env.HOST,
   user: process.env.USER,
@@ -25,25 +29,7 @@ exports.MySQLConnection = MySQLConnection = mysql.createPool({
 
 MySQLConnection.getConnection(function (err) {
   if (err) throw err;
-  console.log("MYSQL DB Connected!");
-});
-
-// exports.mongoose = mongoose.connect('mongodb://localhost:27017/waya', {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true
-// }).then(() => {
-//   console.log('Connected to MongoDB!');
-// }).catch((err) => {
-//   console.error('Error connecting to MongoDB:', err);
-// });
-
-exports.mongoose = mongoose.connect(`mongodb+srv://stephennyamali:${process.env.MONGODB_PASSWORD}@cluster0.q7n495m.mongodb.net/?retryWrites=true&w=majority`, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
-  console.log('Connected to MongoDB!');
-}).catch((err) => {
-  console.error('Error connecting to MongoDB:', err);
+  console.log(info("MYSQL DB Connected!"));
 });
 
 const port = process.env.PORT || 3000;

@@ -31,5 +31,8 @@
     "pg": "^8.10.0",
     "redis": "^4.6.6",
     "socket.io": "^4.5.4"
+  },
+  "devDependencies": {
+    "eslint": "^8.40.0"
   }
 }

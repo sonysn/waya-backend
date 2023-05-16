@@ -1,10 +1,12 @@
 const redis = require('redis');
-const { error } = require('../ansi-colors-config');
-const client = redis.createClient({url: process.env.REDIS_URL});
+const dotenv = require('dotenv');
+const { error, info } = require('../ansi-colors-config');
+dotenv.config();
+const client = redis.createClient({url: process.env.REDIS_LOCAL_URL || process.env.REDIS_RENDER_URL});
 
 //REDIS CONNECTION
 client.on('connect', function() {
-    console.log('Connected to Redis!');
+    console.log(info('Connected to Redis!'));
   });
 
 client.on('error', function(err) {
