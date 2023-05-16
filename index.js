@@ -24,7 +24,9 @@ exports.MySQLConnection = MySQLConnection = mysql.createPool({
   host: process.env.HOST,
   user: process.env.USER,
   password: process.env.PASSWORD,
-  database: process.env.DATABASE
+  database: process.env.DATABASE,
+  //Enable multiple statements in command
+  multipleStatements: true
 });
 
 MySQLConnection.getConnection(function (err) {
