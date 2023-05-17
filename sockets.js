@@ -153,8 +153,8 @@ exports.sockets = function sockets() {
 
         //this function gets location cordinates and id and pushes it to server in real time
         //from driver
-        socket.on('driverLocationUpdates', function (data, id) {
-            locationUpdateWT(data, id);
+        socket.on('driverLocationUpdates', function (data, id, verificationStatus) {
+            locationUpdateWT(data, id, verificationStatus);
             //console.log(data, id);
             //console.log(connectedUsersSocketIDs)
             //console.log(DriverFound);

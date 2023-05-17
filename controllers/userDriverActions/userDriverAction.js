@@ -76,17 +76,19 @@ exports.availability = async (req, res) => {
 //WEBSOCKET REQUEST BELOW HERE
 
 //websocket location update
-exports.locationUpdateWT = (locationPoint, driver_ID) => {
+exports.locationUpdateWT = (locationPoint, driver_ID, verificationStatus) => {
     //FORMAT FROM THE APP IS (LAT, LONG)
     //SQL format is (LATITUDE, LONGITUDE)
     //REDIS FORMAT IS (LONG, LAT)
     const members = {
         driverID: driver_ID,
-        verified: true
+        verified: verificationStatus
     }
-    redisClient.geoAdd('driverLocations', { longitude: locationPoint[1], latitude: locationPoint[0], member: JSON.stringify(members)})
-    redisClient.set(`Driver${members.driverID}`, JSON.stringify(members))
-    redisClient.expire(`Driver${members.driverID}`, 10);
+    redisClient.multi()
+    .geoAdd('driverLocations', { longitude: locationPoint[1], latitude: locationPoint[0], member: JSON.stringify(members)})
+    .set(`Driver${members.driverID}`, JSON.stringify(members))
+    .expire(`Driver${members.driverID}`, 10)
+    .exec();
     
     //DONE I'VE REMOVED THIS
     // SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
