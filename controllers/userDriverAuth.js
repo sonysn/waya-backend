@@ -16,7 +16,7 @@ exports.validateSignUp = async (req, res, next) => {
     await MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
 
         if (err) {
-            console.error("An error occurred:", err.message);
+            console.error(errormessage("An error occurred:", err.message));
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
             if (result.length) {
@@ -37,10 +37,10 @@ const uploadStructure = async function (fileinfo, folderD) {
         file: fileinfo.buffer.toString('base64'),
         fileName: fileinfo.originalname,
         folder: `/driverfiles/${folderD}`
-    }).then(res => {
-        reply = res.url;
+    }).then(resp => {
+        reply = resp.url;
     }).catch(error => {
-        console.log(errormessage(error));
+        console.log(errormessage(`${error}`));
     })
     //This returns the url of the saved file
     return reply;
@@ -48,77 +48,71 @@ const uploadStructure = async function (fileinfo, folderD) {
 
 //TODO: create /driverfiles in imagekit in new account if applicable
 exports.signup = async (req, res) => {
-    //to be requested from user
-    const { firstname, lastname, password, phoneNumber, email, address, dob } = req.body;
-    var hashedPassword;
+    try {
+        const { firstname, lastname, password, phoneNumber, email, address, dob, vehicleMake, vehicleModel, vehicleColour, vehicleBodytype, vehicleYear, vehiclePlateNumber } = req.body;
+        var hashedPassword;
 
-    //url returns
-    var profilePhotoLink;
-    var driversLicenseLink;
-    var vehicleInsuranceLink;
+        var profilePhotoLink;
+        var driversLicenseLink;
+        var vehicleInsuranceLink;
 
-    // Access uploaded file information
-    const profilePhotoData = req.files['profilePhoto'][0];
-    const driversLicenseData = req.files['driversLicense'][0];
-    const vehicleInsuranceData = req.files['vehicleInsurance'][0];
+        const profilePhotoData = req.files['profilePhoto'][0];
+        const driversLicenseData = req.files['driversLicense'][0];
+        const vehicleInsuranceData = req.files['vehicleInsurance'][0];
 
-    //date parse
-    const today = new Date();
-    var month = today.getMonth() + 1;
-    //remove "+"" from phone number
-    var phonestr = phoneNumber
-    const folderData = `${firstname}_${lastname}_${phonestr.replace('+', '')}_${today.getFullYear() + '-' + month + '-' + today.getDate()}`
+        //date parse
+        const today = new Date();
+        var month = today.getMonth() + 1;
+        //remove "+" from phone number
+        var phonestr = phoneNumber;
+        const folderData = `${firstname}_${lastname}_${phonestr.replace('+', '')}_${today.getFullYear()}-${month}-${today.getDate()}`;
 
-    //console.log(profilePhotoData.buffer)
-    imagekit.createFolder({
-        folderName: folderData,
-        parentFolderPath: "/driverfiles"
-    }).then(
-        profilePhotoLink = await uploadStructure(profilePhotoData, folderData),
-        driversLicenseLink = await uploadStructure(driversLicenseData, folderData),
-        vehicleInsuranceLink = await uploadStructure(vehicleInsuranceData, folderData)
-        // console.log('p: ' + p)
-    );
+        //console.log(profilePhotoData.buffer)
+        await imagekit.createFolder({
+            folderName: folderData,
+            parentFolderPath: "/driverfiles"
+        });
 
-    //escaping query values to prevent sql injection
-    const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, DRIVER_LICENSE, VEHICLE_INSURANCE) 
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
-    //hash user password
-    //TODO: process.env.SALTROUNDS not working properly
-    bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
-        //console.log(process.env.SALTROUNDS)
-        bcrypt.hash(password, salt, async function (err, hash) {
-            //console.log('hash: ' + hash);
+        profilePhotoLink = await uploadStructure(profilePhotoData, folderData);
+        driversLicenseLink = await uploadStructure(driversLicenseData, folderData);
+        vehicleInsuranceLink = await uploadStructure(vehicleInsuranceData, folderData);
 
-            var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink];
-            //sql command to db
-            await MySQLConnection.query(SQLCOMMAND, data, async(err, result) => {
-                if (err) console.log(errormessage(err));
+        //escaping query values to prevent sql injection
+        const SQLCOMMAND = `INSERT INTO driver(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, DRIVER_LICENSE, VEHICLE_INSURANCE, VEHICLE_MAKE, VEHICLE_MODEL, VEHICLE_COLOUR, VEHICLE_BODY_TYPE, VEHILCE_MODEL_YEAR, VEHICLE_PLATE_NUMBER) 
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+
+        //hash user password
+        bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
+            bcrypt.hash(password, salt, async function (err, hash) {
+                var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink, vehicleMake, vehicleModel, vehicleColour, vehicleBodytype, vehicleYear, vehiclePlateNumber];
+                await MySQLConnection.query(SQLCOMMAND, data);
 
                 let mailOptions = {
-                    from: 'admin@yousellquick.com', // sender address
-                    to: `${email}`, // list of receivers
-                    subject: "Waya Welcome", // Subject line
+                    from: 'admin@yousellquick.com',
+                    to: email,
+                    subject: "Waya Welcome",
                     text: `Hello ${firstname}, Welcome to Waya Driver. Here are a few steps to get you started: 
-                    1. Visit our centers for verification and vehicle checking
-                    2. Sit back and relax
-                    3. Start earning money driving in your commute route
-                    ` // plain text body
-                }
-            
-                await transporter.sendMail(mailOptions, function (err, data) {
+            1. Visit our centers for verification and vehicle checking
+            2. Sit back and relax
+            3. Start earning money driving in your commute route`
+                };
+
+                transporter.sendMail(mailOptions, function (err, data) {
                     if (err) {
                         console.log(errormessage(`Mailer Error: ${err}`));
                     }
+                    console.log(info("Driver Sign up Email Sent!"));
                 });
 
-                return res.sendStatus(200).json({ message: "Signup success!" });
+                res.status(200).json({ message: "Signup success!" });
             });
-        })
-    })
+        });
+    } catch (error) {
+        console.error(errormessage(`${error}`));
+        res.status(500).json({ status: 500, message: "An error occurred: " + error.message });
+    }
+};
 
-
-}
 
 exports.ValidateSignin = async (req, res, next) => {
     const { phoneNumber, email, password, deviceID } = req.body;
@@ -176,8 +170,8 @@ exports.signin = async (req, res) => {
 exports.logout = async (req, res) => {
     const { id } = req.body;
     const SQLCOMMAND = `UPDATE driver SET DEVICE_REG_TOKEN = NULL AND AVAILABILITY = FALSE WHERE ID = ?;`
-    MySQLConnection.query(SQLCOMMAND, id, function (err, result){
-        if (err){console.log(errormessage(`Logout SQL Error: ${err}`))}
+    MySQLConnection.query(SQLCOMMAND, id, function (err, result) {
+        if (err) { console.log(errormessage(`Logout SQL Error: ${err}`)) }
     });
     res.sendStatus(200);
 };
