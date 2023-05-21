@@ -21,10 +21,11 @@ exports.getDriverCars = async (req, res) => {
     const driverID = req.params.driver;
     const delay = time => new Promise(res => setTimeout(res, time));
 
-    SQLCOMMAND = `SELECT driver.FIRST_NAME, driver.LAST_NAME, driver.PHONE_NUMBER, driver.EMAIL, driver_cars.MODEL, driver_cars.MAKE, 
-    driver_cars.PLATE_NUMBER, driver_cars.COLOUR
-    FROM driver
-    JOIN driver_cars ON driver_cars.DRIVER_ID = driver.ID WHERE driver.ID = ?;`
+    // SQLCOMMAND = `SELECT driver.FIRST_NAME, driver.LAST_NAME, driver.PHONE_NUMBER, driver.EMAIL, driver_cars.MODEL, driver_cars.MAKE, 
+    // driver_cars.PLATE_NUMBER, driver_cars.COLOUR
+    // FROM driver
+    // JOIN driver_cars ON driver_cars.DRIVER_ID = driver.ID WHERE driver.ID = ?;`
+    SQLCOMMAND = `SELECT VEHICLE_MAKE, VEHICLE_MODEL, VEHICLE_PLATE_NUMBER, VEHICLE_COLOUR, VEHICLE_BODY_TYPE FROM driver WHERE ID = ?`
 
     await MySQLConnection.query(SQLCOMMAND, driverID, async (err, result) => {
         //await delay(1500);
@@ -52,16 +53,20 @@ exports.ensureToken = async (req, res, next) => {
     }
 }
 
-//FIXME THIS CODE DOES NOTHING
-exports.locationUpdate = async (req, res) => {
+
+exports.locationUpdatePing = async (req, res) => {
+    //FORMAT FROM APP IS LAT, LONG
     const { locationPoint } = req.body;
     const driver_ID = req.params.driverID;
+    //console.log("Location:", locationPoint)
+    
+    //THIS IS LONG LAT BELOW
+    console.log(locationPoint[1], locationPoint[0])
 
-
-    //not escaping this due to the POINT requirements
-    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
+    const locationInLongLat = [locationPoint[1], locationPoint[0]]
+    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationInLongLat}) WHERE ID = ?;`
     await MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
-        return res.sendStatus(200);
+        // return res.sendStatus(200);
     })
 }
 
@@ -77,8 +82,9 @@ exports.availability = async (req, res) => {
 
 //websocket location update
 exports.locationUpdateWT = (locationPoint, driver_ID, verificationStatus) => {
+    //BUG NOTE
     //FORMAT FROM THE APP IS (LAT, LONG)
-    //SQL format is (LATITUDE, LONGITUDE)
+    //UPDATED: SQL format is (LONG, LAT)
     //REDIS FORMAT IS (LONG, LAT)
     const members = {
         driverID: driver_ID,
