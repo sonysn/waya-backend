@@ -66,7 +66,7 @@ exports.locationUpdatePing = async (req, res) => {
     const locationInLongLat = [locationPoint[1], locationPoint[0]]
     SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationInLongLat}) WHERE ID = ?;`
     await MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
-        // return res.sendStatus(200);
+        return res.sendStatus(200);
     })
 }
 

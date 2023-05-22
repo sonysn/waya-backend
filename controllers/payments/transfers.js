@@ -1,5 +1,5 @@
 const { MySQLConnection } = require('../../index');
-const { DebitToDriver, DebitToOtherUsers } = require('../../models/transfers');
+const { userToDriver, UsersToUsers } = require('../../models/transfers');
 const { info, errormessage } = require('./../../ansi-colors-config')
 
 exports.tranferUserstoDrivers = async (req, res) => {
@@ -32,6 +32,7 @@ exports.tranferUserstoDrivers = async (req, res) => {
                 res.status(404).json({ status: 404, message: 'No driver found.' });
                 return;
             }
+
             const driverID = result[0].ID;
             const driverAccountBalance = result[0].ACCOUNT_BALANCE;
             const value = amountToBeTransferred;
@@ -62,10 +63,10 @@ exports.tranferUserstoDrivers = async (req, res) => {
                     res.status(500).json({ status: 500, message: 'An error occurred while processing your request.' });
                     return;
                 }
-                const payment = new DebitToDriver(parsedPayment);
+                const payment = new userToDriver(parsedPayment);
                 payment.save()
                     .then(() => console.log(info('Payment saved to database')))
-                    .catch(error => console.error(errormessage(error)));
+                    .catch(error => console.error(errormessage(`${error}`)));
                 res.json({ status: 200, message: 'Transaction Complete' });
             });
         });
@@ -73,7 +74,7 @@ exports.tranferUserstoDrivers = async (req, res) => {
 
 };
 
-//FIXME
+
 exports.tranferUserstoOtherUsers = async (req, res) => {
     const { amountToBeTransferred, userReceivingPhoneNumber, userSendingPhoneNumber } = req.body;
 
@@ -108,8 +109,9 @@ exports.tranferUserstoOtherUsers = async (req, res) => {
             const userReceivingID = result[0].ID;
             const userReceivingAccountBalance = result[0].ACCOUNT_BALANCE;
             const value = amountToBeTransferred;
+            const newUserBalance = accountBalance - value;
             const new_value = userReceivingAccountBalance + value;
-            const SQLCOMMAND2 = `UPDATE users SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?;`
+            const SQLCOMMAND2 = `UPDATE users SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?; UPDATE users SET ACCOUNT_BALANCE = ? WHERE ID = ?;`
 
             //SAVE TRANSACTION TO MONGO
             //get todays date and parse it for sql db
@@ -129,16 +131,16 @@ exports.tranferUserstoOtherUsers = async (req, res) => {
             }
 
 
-            MySQLConnection.query(SQLCOMMAND2, [new_value, userReceivingPhoneNumber], function (err, result) {
+            MySQLConnection.query(SQLCOMMAND2, [new_value, userReceivingPhoneNumber, newUserBalance, userSendingID], function (err, result) {
                 if (err) {
                     console.error(err);
                     res.status(500).json({ status: 500, message: 'An error occurred while processing your request.' });
                     return;
                 }
-                const payment = new DebitToOtherUsers(parsedPayment);
+                const payment = new UsersToUsers(parsedPayment);
                 payment.save()
                     .then(() => console.log(info('Payment saved to database')))
-                    .catch(error => console.error(errormessage(error)));
+                    .catch(error => console.error(errormessage(`${error}`)));
                 res.json({ status: 200, message: 'Transaction Complete' });
             });
         });
@@ -197,17 +199,14 @@ exports.tranferDriverstoOtherDrivers = async (req, res) => {
             const value = amountToBeTransferred / 1;
             const new_value = userReceivingAccountBalance + value;
             const new_balance_forSender = accountBalance - value;
-            const SQLCOMMAND2 = `UPDATE driver SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?;`
-            //FIXME PUT THESE INTO ONE COMMAND
-            MySQLConnection.query(SQLCOMMAND2, [new_value, driverReceivingPhoneNumber], function (err, result) {
+            const SQLCOMMAND2 = `UPDATE driver SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?; UPDATE driver SET ACCOUNT_BALANCE = ? WHERE PHONE_NUMBER LIKE ?;`
+            // Update the account balance of the driver sending the funds.
+            MySQLConnection.query(SQLCOMMAND2, [new_value, driverReceivingPhoneNumber, new_balance_forSender, driverSendingPhoneNumber], function (err, result) {
                 if (err) {
                     console.error(err);
                     res.status(500).json({ status: 500, message: 'An error occurred while processing your request.' });
                     return;
                 }
-                // Update the account balance of the driver sending the funds.
-                MySQLConnection.query(SQLCOMMAND2, [new_balance_forSender, driverSendingPhoneNumber], function (err, result) { });
-                // Return a success message.
                 res.json({ status: 200, message: 'Transaction Complete' });
             });
         });

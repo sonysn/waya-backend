@@ -17,7 +17,7 @@ const userToUsers = new Schema({
     timePaid: String
 })
 
-const DebitToDriver = mongoose.model('DebitToDriver', userToDriverSchema);
-const DebitToOtherUsers = mongoose.model('DebitToOtherUsers', userToUsers);
+const userToDriver = mongoose.model('UserToDriver', userToDriverSchema);
+const UsersToUsers = mongoose.model('UsersToUsers', userToUsers);
 
-module.exports = { DebitToDriver, DebitToOtherUsers };
+module.exports = { userToDriver, UsersToUsers };

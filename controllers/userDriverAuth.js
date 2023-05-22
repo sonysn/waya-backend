@@ -16,7 +16,7 @@ exports.validateSignUp = async (req, res, next) => {
     await MySQLConnection.query(SQLCOMMAND1, [phoneNumber, email], (err, result) => {
 
         if (err) {
-            console.error(errormessage("An error occurred:", err.message));
+            console.error(errormessage(`An error occurred: ${err.message}`));
             res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
         } else {
             if (result.length) {
