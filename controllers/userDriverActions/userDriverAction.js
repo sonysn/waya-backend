@@ -56,7 +56,7 @@ exports.ensureToken = async (req, res, next) => {
 
 exports.locationUpdatePing = async (req, res) => {
     //FORMAT FROM APP IS LAT, LONG
-    const { locationPoint } = req.body;
+    const { locationPoint, timeStamp } = req.body;
     const driver_ID = req.params.driverID;
     //console.log("Location:", locationPoint)
     
@@ -64,8 +64,9 @@ exports.locationUpdatePing = async (req, res) => {
     console.log(locationPoint[1], locationPoint[0])
 
     const locationInLongLat = [locationPoint[1], locationPoint[0]]
-    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationInLongLat}) WHERE ID = ?;`
-    await MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
+    SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationInLongLat}) WHERE ID = ?; 
+    UPDATE driver SET LOCATION_LAST_PING = ? WHERE ID = ?; `;
+    await MySQLConnection.query(SQLCOMMAND, [driver_ID, timeStamp, driver_ID], (err, result) => {
         return res.sendStatus(200);
     })
 }
