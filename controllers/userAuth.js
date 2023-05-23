@@ -20,7 +20,7 @@ exports.validateSignUp = async (req, res, next) => {
         } else {
             if (result.length) {
                 //console.log("User with that phone number or email exists.");
-                res.status(200).json({ status: 200, message: "User with that phone number or email exists." });
+                res.status(401).json({ status: 401, message: "User with that phone number or email exists." });
             } else {
                 //console.log("User not found.");
                 //res.status(404).send({ status: 404, message: "User not found." });
@@ -29,6 +29,10 @@ exports.validateSignUp = async (req, res, next) => {
         }
     })
 }
+
+function capitalizeFirstLetter(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
 
 exports.signup = async (req, res) => {
     //to be requested from user
@@ -43,7 +47,7 @@ exports.signup = async (req, res) => {
         bcrypt.hash(password, salt, async function (err, hash) {
             //console.log(hash);
 
-            var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
+            var data = [capitalizeFirstLetter(firstname), capitalizeFirstLetter(lastname), hash, phoneNumber, email, address, dob, profilePhoto, meansofID];
             //sql command to db
             await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
                 //if (err) throw err;

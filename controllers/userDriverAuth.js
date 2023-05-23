@@ -46,6 +46,10 @@ const uploadStructure = async function (fileinfo, folderD) {
     return reply;
 }
 
+function capitalizeFirstLetter(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
 //TODO: create /driverfiles in imagekit in new account if applicable
 exports.signup = async (req, res) => {
     try {
@@ -84,7 +88,7 @@ exports.signup = async (req, res) => {
         //hash user password
         bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
             bcrypt.hash(password, salt, async function (err, hash) {
-                var data = [firstname, lastname, hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink, vehicleMake, vehicleModel, vehicleColour, vehicleBodytype, vehicleYear, vehiclePlateNumber];
+                var data = [capitalizeFirstLetter(firstname), capitalizeFirstLetter(lastname), hash, phoneNumber, email, address, dob, profilePhotoLink, driversLicenseLink, vehicleInsuranceLink, vehicleMake, vehicleModel, vehicleColour, vehicleBodytype, vehicleYear, vehiclePlateNumber];
                 await MySQLConnection.query(SQLCOMMAND, data);
 
                 let mailOptions = {
@@ -161,7 +165,7 @@ exports.signin = async (req, res) => {
                 });
                 //res.json({ message: "Logged In"});
             } else {
-                res.status(401).send({ message: "Wrong password or Email" })
+                res.status(401).send({ message: "Wrong Password or Email" })
             }
         })
     })
