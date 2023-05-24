@@ -108,57 +108,60 @@ exports.searchForDrivers = async (req, res) => {
 
 
   if (reply.length === 0) {
-    res.status(404).json("No drivers available");
-  } else {
-    let driversAvailable = false;
-    for (let i = 0; i < reply.length; i++) {
-      const response = JSON.parse(reply[i]);
-      const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`);
-      if (getOnlineDriverWhoAreVerifiedOnly) {
-        if (response.verified === true) {
-          SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
-          await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
-            if (err) {
-              console.log(errormessage(`MYSQL ERROR: ${err}`));
-              return res.status(500).json("Internal server error");
-            } else {
-              // Send message to driver device even when app is killed
-              const message = {
-                notification: {
-                  title: `Someone is requesting a ride from ${pickupLocation}`
-                },
-                token: result[0]["DEVICE_REG_TOKEN"],
-              };
+    return res.status(404).json("No drivers available");
+  }
 
-              // Send message to driver
-              admin.messaging().send(message)
-                .then((response) => {
-                  console.log(info(`Successfully sent message: ${response}`));
-                })
-                .catch((error) => {
-                  console.error(errormessage(`Failed to send message: ${error}`));
-                });
+  let driversAvailable = false;
 
-              const who = "Driver";
-              const driverid = who + response.driverID;
+  for (let i = 0; i < reply.length; i++) {
+    const response = JSON.parse(reply[i]);
+    const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`);
 
-              const driversocket = connectedUsers.getSocket(driverid);
-              io.to(driversocket).emit("ridenotifications", req.body);
+    if (getOnlineDriverWhoAreVerifiedOnly) {
+      if (response.verified === true) {
+        SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
+        await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+          if (err) {
+            console.log(errormessage(`MYSQL ERROR: ${err}`));
+            return res.status(500).json("Internal server error");
+          }
 
-              driversAvailable = true;
-            }
-          });
-        }
+          // Send message to driver device even when app is killed
+          const message = {
+            notification: {
+              title: `Someone is requesting a ride from ${pickupLocation}`
+            },
+            token: result[0]["DEVICE_REG_TOKEN"],
+          };
+
+          // Send message to driver
+          admin.messaging().send(message)
+            .then((response) => {
+              console.log(info(`Successfully sent message: ${response}`));
+            })
+            .catch((error) => {
+              console.error(errormessage(`Failed to send message: ${error}`));
+            });
+
+          const who = "Driver";
+          const driverid = who + response.driverID;
+
+          const driversocket = connectedUsers.getSocket(driverid);
+          io.to(driversocket).emit("ridenotifications", req.body);
+        });
+
+        driversAvailable = true;
       }
     }
-
-    if (driversAvailable) {
-      res.status(200).json("Drivers available");
-    } else {
-      console.log(warning("No drivers available"));
-      res.status(404).json("No drivers available");
-    }
   }
+
+  if (driversAvailable) {
+    return res.status(200).json("Notifications sent to all verified drivers");
+  } else {
+    console.log(warning("No drivers available"));
+    return res.status(404).json("No verified drivers available");
+  }
+
 
 
 
