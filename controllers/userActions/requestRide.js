@@ -222,7 +222,7 @@ exports.driverCount = async (req, res) => {
   //     CURRENT_LOCATION
   //   ) as distance FROM driver WHERE AVAILABILITY = true
   // ) AS LOCATION WHERE distance < 10000`;
-  const reply = await redisClient.geoRadius('driverLocations', { longitude: outputLoc[1], latitude: outputLoc[0] }, 10, 'km');
+  const reply = await redisClient.geoRadius('driverLocations', { longitude: outputLoc[1], latitude: outputLoc[0] }, 100, 'km');
 
   var driverCount = 0;
 
