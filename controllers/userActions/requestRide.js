@@ -106,31 +106,31 @@ exports.searchForDrivers = async (req, res) => {
 
   const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, 100, 'km');
 
-  if (reply.length == 0) {
+
+  if (reply.length === 0) {
     res.status(404).json("No drivers available");
   } else {
+    let driversAvailable = false;
     for (let i = 0; i < reply.length; i++) {
       const response = JSON.parse(reply[i]);
-      const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`)
-      //console.log(getOnlineDriverWhoAreVerifiedOnly)
+      const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`);
       if (getOnlineDriverWhoAreVerifiedOnly) {
-        if (response.verified == true) {
+        if (response.verified === true) {
           SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
           await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
             if (err) {
               console.log(errormessage(`MYSQL ERROR: ${err}`));
-              res.status(500).json("Internal server error");
+              return res.status(500).json("Internal server error");
             } else {
-              //message to driver device even when app is killed
+              // Send message to driver device even when app is killed
               const message = {
                 notification: {
-                  //title: 'Message from Node.js',
                   title: `Someone is requesting a ride from ${pickupLocation}`
                 },
                 token: result[0]["DEVICE_REG_TOKEN"],
               };
-  
-              //send message to driver
+
+              // Send message to driver
               admin.messaging().send(message)
                 .then((response) => {
                   console.log(info(`Successfully sent message: ${response}`));
@@ -138,30 +138,31 @@ exports.searchForDrivers = async (req, res) => {
                 .catch((error) => {
                   console.error(errormessage(`Failed to send message: ${error}`));
                 });
-  
+
               const who = "Driver";
               const driverid = who + response.driverID;
-  
+
               const driversocket = connectedUsers.getSocket(driverid);
-              //console.log(req.body);
               io.to(driversocket).emit("ridenotifications", req.body);
+
+              driversAvailable = true;
             }
-          }
-          );
-  
+          });
         }
-        else {
-          res.status(404).json("No drivers available");
-        }
-      } else {
-        console.log(warning("No drivers available"));
-        res.status(404).json("No drivers available");
       }
     }
-  
+
+    if (driversAvailable) {
+      res.status(200).json("Drivers available");
+    } else {
+      console.log(warning("No drivers available"));
+      res.status(404).json("No drivers available");
+    }
   }
 
-  
+
+
+
   // await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
   //   if (err) {
   //     console.log(err);
