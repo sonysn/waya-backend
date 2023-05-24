@@ -104,7 +104,7 @@ exports.searchForDrivers = async (req, res) => {
 
   console.log(pickupLocationPosition);
 
-  const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, 10, 'km');
+  const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, 100, 'km');
 
   if (reply.length == 0) {
     res.status(404).json("No drivers available");
