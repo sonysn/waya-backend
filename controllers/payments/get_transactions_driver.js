@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const { userToDriver } = require('../../models/transfers');
 const { PaystackDepositsDrivers } = require('../../models/paystack_deposit_drivers');
 const { errormessage } = require('../../ansi-colors-config');

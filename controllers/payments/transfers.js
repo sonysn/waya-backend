@@ -213,3 +213,40 @@ exports.tranferDriverstoOtherDrivers = async (req, res) => {
     });
 };
 
+exports.getDriverData = async (req, res) => {
+    const driverPhoneNumber = req.params.driverPhoneNumber
+
+    const SQLCOMMAND = `SELECT FIRST_NAME, LAST_NAME FROM driver WHERE PHONE_NUMBER LIKE ?`;
+
+    MySQLConnection.query(SQLCOMMAND, driverPhoneNumber, function (err, result){
+        if (err) {
+            console.error(err);
+            res.status(500).json({ status: 500, message: 'An error occurred.' });
+            return;
+        }
+        if (result.length != 0){
+            res.json({ message: result[0]  });
+        } else {
+            res.json({ message: 'No Driver Found' });
+        }
+    })
+}
+
+exports.getUserData = async (req, res) => {
+    const userPhoneNumber = req.params.userPhoneNumber
+
+    const SQLCOMMAND = `SELECT FIRST_NAME, LAST_NAME FROM users WHERE PHONE_NUMBER LIKE ?`;
+
+    MySQLConnection.query(SQLCOMMAND, userPhoneNumber, function (err, result){
+        if (err) {
+            console.error(err);
+            res.status(500).json({ status: 500, message: 'An error occurred.' });
+            return;
+        }
+        if (result.length != 0){
+            res.json({ message: result[0]  });
+        } else {
+            res.json({ message: 'No User Found' });
+        }
+    })
+}
