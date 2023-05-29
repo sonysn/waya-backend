@@ -5,6 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "artillery run test.yml",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format:check": "prettier --check .",
+    "format": "npx prettier --write .",
     "dev": "nodemon index.js",
     "start": "node index.js"
   },
@@ -33,6 +37,7 @@
     "socket.io": "^4.5.4"
   },
   "devDependencies": {
-    "eslint": "^8.40.0"
+    "eslint": "^8.40.0",
+    "prettier": "^2.8.8"
   }
 }

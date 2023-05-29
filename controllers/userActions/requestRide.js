@@ -205,12 +205,19 @@ exports.searchForDrivers = async (req, res) => {
 };
 
 exports.driverAcceptRide = async (req, res) => {
-  const { riderID } = req.body;
+  const { riderID, driverID } = req.body;
   const whoRequested = "Rider"
   const riderid = whoRequested + riderID;
+
   console.log(riderid);
+
   const riderSocket = connectedUsers.getSocket(riderid);
   io.to(riderSocket).emit("acceptedRide?", req.body);
+
+  redisClient.set(`${riderid}`, JSON.stringify(req.body));
+
+  const driverid = 'Driver' + driverID + 'Trips';
+  redisClient.HSET(driverid, riderid, 'null');
   //when the driver accepts ride, write a code to keep checking the driver location and when it is close to the 
   //users location, send a notification to the user that the driver has arrived
 };
@@ -261,6 +268,85 @@ exports.driverCount = async (req, res) => {
   res.json(driverCount);
 };
 
+/**
+ * ?Note: This function is called to get the Riders Current / Active Ride, if theres none it will return null
+ */
+exports.getCurrentRide = async (req, res) => {
+  const riderID = req.params.riderID;
+  const riderid = 'Rider' + riderID;
+  const reply = await redisClient.get(riderid);
+  console.log(reply)
+  res.json(JSON.parse(reply));
+
+};
+
+/**
+ * ?The code defines an asynchronous function driverGetCurrentRides to handle a request for retrieving current rides for a specific driver.
+1. The driverID is extracted from the request parameters.
+2. The driverid is constructed by concatenating 'Driver', driverID, and 'Trips'.
+3. The Redis HGETALL command is used to retrieve all fields and their values from the Redis hash associated with driverid.
+4. The field names from the reply object are extracted using Object.keys.
+5. An empty array replyAgainValues is initialized to store the retrieved values.
+6. A for...of loop is used to iterate over each fieldName in the fieldNames array.
+7. Inside the loop, the current value for the fieldName is logged to the console.
+8. The corresponding value is retrieved from Redis using redisClient.get with the fieldName.
+9. The retrieved value is logged to the console.
+10. The retrieved value is parsed as JSON using JSON.parse and added to the replyAgainValues array.
+11. After the loop, the replyAgainValues array is sent as the JSON response using res.json.
+ */
+exports.driverGetCurrentRides = async (req, res) => {
+  const driverID = req.params.driverID;
+  const driverid = 'Driver' + driverID + 'Trips';
+  const reply = await redisClient.HGETALL(driverid);
+  // console.log(reply);
+
+  const fieldNames = Object.keys(reply);
+  const replyAgainValues = [];
+
+  // Loop through each fieldName in the reply object
+  for (const fieldName of fieldNames) {
+    const value = reply[fieldName];
+    console.log(`${fieldName}: ${value}`);
+
+    // Retrieve the corresponding value from Redis using the fieldName
+    const replyAgain = await redisClient.get(fieldName);
+    //console.log(replyAgain);
+
+    // Parse the retrieved value as JSON and add it to the replyAgainValues array
+    replyAgainValues.push(JSON.parse(replyAgain));
+  }
+
+  // Send the replyAgainValues array as the JSON response
+  res.json(replyAgainValues);
+}
+
+/**
+ *The code receives the driverID and riderID from the request body. It then constructs the corresponding Redis keys for the rider and the driver trip entries. The rider entry is deleted from Redis using redisClient.del(riderID), and the rider field is deleted from the driver's trip hash using redisClient.HDEL(driverid, riderId).
+
+*After that, the code checks if there are any remaining fields in the driverid hash using redisClient.HKEYS(driverid). If the length of the fieldNames array is 0, indicating that there are no more fields, the driverid key is deleted from Redis using redisClient.del(driverid).
+
+*Finally, a 200 status code is sent as the response using res.sendStatus(200), indicating that the operation was successful.
+ */
+exports.driverOnRideComplete = async (req, res) => {
+  //TODO: ADD CODE TO SAVE RIDE TO DATABASE WITH THE INFO IN THE DB BEFORE DELETING THE RIDE OFF AND ADD TO APP
+  const { driverID, riderID } = req.body;
+  const riderId = 'Rider' + riderID;
+  const driverid = 'Driver' + driverID + 'Trips';
+
+  // Delete the rider entry from Redis
+  redisClient.del(riderID);
+
+  // Delete the rider field from the driverid hash in Redis
+  redisClient.HDEL(driverid, riderId);
+
+  // Check if there are no fields in the driverid key
+  const fieldNames = await redisClient.HKEYS(driverid);
+  if (fieldNames.length === 0) {
+    redisClient.del(driverid); // Delete the key if it's empty
+  }
+
+  res.sendStatus(200); // Send a 200 status code indicating success
+}
 
 
 //NO USE OF THIS FUNCTION
