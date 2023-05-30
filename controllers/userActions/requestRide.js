@@ -11,8 +11,8 @@ admin.initializeApp({
 exports.getPrice = async (req, res) => {
   const { pickupLocationPosition, dropoffLocationPostion } = req.body;
 
-  console.log('pickup: ', pickupLocationPosition);
-  console.log('dropoff: ', dropoffLocationPostion);
+  // !console.log('pickup: ', pickupLocationPosition);
+  // !console.log('dropoff: ', dropoffLocationPostion);
   //var distance  = dist.getDistance(dropoffLocationPostion[0], dropoffLocationPostion[1], pickupLocationPosition[0], pickupLocationPosition[1]);
 
   const lat1 = dropoffLocationPostion[0]
@@ -34,10 +34,10 @@ exports.getPrice = async (req, res) => {
   const d = R * c; // distance in meters
 
 
-  console.log('distance: ', d);
+  //!console.log('distance: ', d);
 
   const price = process.env.PRICE_PER_DISTANCE * d; // 0.09 naira per kilometer
-  console.log('price: ', price);
+  //!console.log('price: ', price);
   res.json(price);
 };
 
@@ -62,7 +62,7 @@ exports.requestRide = async (req, res, next) => {
 
   await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
     //res.json({ requestTime, message: "Trip requested" });
-    console.log(req.body)
+    //!console.log(req.body)
     next();
   });
 }
@@ -102,7 +102,7 @@ exports.searchForDrivers = async (req, res) => {
   //   ) as distance FROM driver WHERE AVAILABILITY = true
   //   ) AS LOCATION WHERE distance < 10000`;
 
-  console.log(pickupLocationPosition);
+  //!console.log(pickupLocationPosition);
 
   const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, 100, 'km');
 
@@ -210,7 +210,7 @@ exports.driverAcceptRide = async (req, res) => {
   const whoRequested = "Rider"
   const riderid = whoRequested + riderID;
 
-  console.log(riderid);
+  //!console.log(riderid);
 
   const riderSocket = connectedUsers.getSocket(riderid);
   io.to(riderSocket).emit("acceptedRide?", req.body);
@@ -275,7 +275,7 @@ exports.getCurrentRide = async (req, res) => {
   const riderID = req.params.riderID;
   const riderIDFormat = 'Rider' + riderID;
   const reply = await redisClient.get(riderIDFormat);
-  console.log(reply)
+  //!console.log(reply)
   res.json(JSON.parse(reply));
 
 };
@@ -306,7 +306,7 @@ exports.driverGetCurrentRides = async (req, res) => {
   // Loop through each fieldName in the reply object
   for (const fieldName of fieldNames) {
     const value = reply[fieldName];
-    console.log(`${fieldName}: ${value}`);
+    //!console.log(`${fieldName}: ${value}`);
 
     // Retrieve the corresponding value from Redis using the fieldName
     const replyAgain = await redisClient.get(fieldName);
@@ -348,6 +348,7 @@ exports.driverOnRideComplete = async (req, res) => {
   res.sendStatus(200); // Send a 200 status code indicating success
 }
 
+//!Done this is added to the app
 exports.onRiderCancelledRide = async (req, res) => {
   const riderID = req.params.riderID;
   const { driverID } = req.body;
@@ -392,7 +393,7 @@ exports.onRiderCancelledRide = async (req, res) => {
       });
   });
 
-
+  res.sendStatus(200); // Send a 200 status code indicating success
 };
 
 
