@@ -129,7 +129,8 @@ exports.searchForDrivers = async (req, res) => {
           // Send message to driver device even when app is killed
           const message = {
             notification: {
-              title: `Someone is requesting a ride from ${pickupLocation}`
+              title: `New Ride!`,
+              body: `Someone is requesting a ride from ${pickupLocation}`
             },
             token: result[0]["DEVICE_REG_TOKEN"],
           };
@@ -226,7 +227,6 @@ exports.driverCount = async (req, res) => {
   const currentLocationUser = req.params.locationData;
   const currentLocationArray = currentLocationUser.split(' ');
   const outputLoc = currentLocationArray.map(item => item.replace(',', ''));
-  //FIXME GET REDIS TO DELETE LOCATION
   // const SQLCOMMAND = `SELECT ID FROM (
   //   SELECT *, ST_Distance_Sphere(
   //     point(${currentLocationUser}),
@@ -273,8 +273,8 @@ exports.driverCount = async (req, res) => {
  */
 exports.getCurrentRide = async (req, res) => {
   const riderID = req.params.riderID;
-  const riderid = 'Rider' + riderID;
-  const reply = await redisClient.get(riderid);
+  const riderIDFormat = 'Rider' + riderID;
+  const reply = await redisClient.get(riderIDFormat);
   console.log(reply)
   res.json(JSON.parse(reply));
 
@@ -330,24 +330,118 @@ exports.driverGetCurrentRides = async (req, res) => {
 exports.driverOnRideComplete = async (req, res) => {
   //TODO: ADD CODE TO SAVE RIDE TO DATABASE WITH THE INFO IN THE DB BEFORE DELETING THE RIDE OFF AND ADD TO APP
   const { driverID, riderID } = req.body;
-  const riderId = 'Rider' + riderID;
-  const driverid = 'Driver' + driverID + 'Trips';
+  const riderIDFormat = 'Rider' + riderID;
+  const driverIDFormat = 'Driver' + driverID + 'Trips';
 
   // Delete the rider entry from Redis
-  redisClient.del(riderID);
+  redisClient.del(riderIDFormat);
 
-  // Delete the rider field from the driverid hash in Redis
-  redisClient.HDEL(driverid, riderId);
+  // Delete the rider field from the driverIDFormat hash in Redis
+  redisClient.HDEL(driverIDFormat, riderIDFormat);
 
   // Check if there are no fields in the driverid key
-  const fieldNames = await redisClient.HKEYS(driverid);
+  const fieldNames = await redisClient.HKEYS(driverIDFormat);
   if (fieldNames.length === 0) {
-    redisClient.del(driverid); // Delete the key if it's empty
+    redisClient.del(driverIDFormat); // Delete the key if it's empty
   }
 
   res.sendStatus(200); // Send a 200 status code indicating success
 }
 
+exports.onRiderCancelledRide = async (req, res) => {
+  const riderID = req.params.riderID;
+  const { driverID } = req.body;
+
+  const riderIDFormat = 'Rider' + riderID;
+  const driverIDFormat = 'Driver' + driverID + 'Trips';
+
+  // Delete the rider entry from Redis
+  redisClient.del(riderIDFormat);
+
+  // Delete the rider field from the driverIDFormat hash in Redis
+  redisClient.HDEL(driverIDFormat, riderIDFormat);
+
+  // Check if there are no fields in the driverid key
+  const fieldNames = await redisClient.HKEYS(driverIDFormat);
+  if (fieldNames.length === 0) {
+    redisClient.del(driverIDFormat); // Delete the key if it's empty
+  }
+
+  SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ?`
+  await MySQLConnection.query(SQLCOMMAND, driverID, async (err, result) => {
+    if (err) {
+      console.log(errormessage(`MYSQL ERROR: ${err}`));
+    }
+
+    // Send message to driver device
+    const message = {
+      notification: {
+        title: `New Notification`,
+        body: `The Rider Cancelled The Request`
+      },
+      token: result[0]["DEVICE_REG_TOKEN"],
+    };
+
+    // Send message to driver
+    admin.messaging().send(message)
+      .then((response) => {
+        console.log(info(`Successfully sent message: ${response}`));
+      })
+      .catch((error) => {
+        console.error(errormessage(`Failed to send message: ${error}`));
+      });
+  });
+
+
+};
+
+
+exports.onDriverCancelledRide = async (req, res) => {
+  const driverID = req.params.driverID;
+  const { riderID } = req.body;
+
+  const riderIDFormat = 'Rider' + riderID;
+  const driverIDFormat = 'Driver' + driverID + 'Trips';
+
+  // Delete the rider entry from Redis
+  redisClient.del(riderIDFormat);
+
+  // Delete the rider field from the driverIDFormat hash in Redis
+  redisClient.HDEL(driverIDFormat, riderIDFormat);
+
+  // Check if there are no fields in the driverid key
+  const fieldNames = await redisClient.HKEYS(driverIDFormat);
+  if (fieldNames.length === 0) {
+    redisClient.del(driverIDFormat); // Delete the key if it's empty
+  }
+
+  SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM users WHERE ID = ?`
+  await MySQLConnection.query(SQLCOMMAND, driverID, async (err, result) => {
+    if (err) {
+      console.log(errormessage(`MYSQL ERROR: ${err}`));
+    }
+
+    // Send message to driver device
+    const message = {
+      notification: {
+        title: `New Notification`,
+        body: `the Driver Cancelled The Request`
+      },
+      token: result[0]["DEVICE_REG_TOKEN"],
+    };
+
+    // Send message to driver
+    admin.messaging().send(message)
+      .then((response) => {
+        console.log(info(`Successfully sent message: ${response}`));
+      })
+      .catch((error) => {
+        console.error(errormessage(`Failed to send message: ${error}`));
+      });
+  });
+
+
+};
 
 //NO USE OF THIS FUNCTION
 //WEBSOCKET REQUESTS BELOW HERE
