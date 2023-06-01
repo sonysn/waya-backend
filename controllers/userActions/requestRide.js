@@ -444,6 +444,26 @@ exports.onDriverCancelledRide = async (req, res) => {
 
 };
 
+//!Dkne This is added to the app
+exports.rateDriver = async (req, res) => {
+  const riderID = req.params.riderID;
+  const { driverID, rating } = req.body;
+
+  SQLCOMMAND = `SELECT RATING FROM driver WHERE ID = ?`
+  await MySQLConnection.query(SQLCOMMAND, driverID, function (err, result) {
+    if (err) console.log(errormessage(`${err}`));
+    let currentRating = result[0]["RATING"]
+    let userRated = (currentRating + rating) / 2
+    console.log(userRated);
+
+    SQLCOMMAND1 = `UPDATE drivers SET RATING = ${userRated} WHERE ID = ?`
+    MySQLConnection.query(SQLCOMMAND1, driverID, function (err, result) {
+      if (err) console.log(errormessage(`${err}`));
+    });
+  });
+  res.sendStatus(200); // Send a 200 status code indicating success
+};
+
 //NO USE OF THIS FUNCTION
 //WEBSOCKET REQUESTS BELOW HERE
 //websocket request
