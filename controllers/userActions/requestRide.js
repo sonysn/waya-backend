@@ -2,6 +2,7 @@ const admin = require('firebase-admin');
 const serviceAccount = require('../../waya-firebase-servicekey.json');
 const redisClient = require('../../databases/redis_config');
 const { warning, info, errormessage } = require('../../ansi-colors-config');
+const { RideRequest } = require('../../models/requestRide');
 
 //initialize the service account
 admin.initializeApp({
@@ -45,26 +46,27 @@ exports.requestRide = async (req, res, next) => {
   const { userId, pickupLocation, dropoffLocation, estFare, pickupLocationPosition,
     dropoffLocationPostion, status } = req.body;
 
-  //get todays date and parse it for sql db
-  const today = new Date();
-  //month goes from 0 to 11
-  var month = today.getMonth() + 1;
-  requestDate = today.getFullYear() + '-' + month + '-' + today.getDate();
+  // //get todays date and parse it for sql db
+  // const today = new Date();
+  // //month goes from 0 to 11
+  // var month = today.getMonth() + 1;
+  // requestDate = today.getFullYear() + '-' + month + '-' + today.getDate();
 
-  requestTime = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
-  // requestTime = Time.getTime();
-  //TODO: CHANGES TO requested_rides instead of requested_ridesl
-  //FIXME: STORE INFO ONLY WHEN RIDE IS REQUESTED SUCCESSFULLY
-  SQLCOMMAND = `INSERT INTO requested_ridesl(USER_ID, REQUEST_DATE, REQUEST_TIME, PICKUP_LOCATION, DROPOFF_LOCATION, EST_FARE, 
-        PICKUP_LOCATION_POSITION, DROP_OFF_LOCATION_POSTITION, STATUS) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  var data = [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, pickupLocationPosition,
-    dropoffLocationPostion, status];
+  // requestTime = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
+  // // requestTime = Time.getTime();
+  // //TODO: CHANGES TO requested_rides instead of requested_ridesl
+  // //FIXME: STORE INFO ONLY WHEN RIDE IS REQUESTED SUCCESSFULLY
+  // SQLCOMMAND = `INSERT INTO requested_ridesl(USER_ID, REQUEST_DATE, REQUEST_TIME, PICKUP_LOCATION, DROPOFF_LOCATION, EST_FARE, 
+  //       PICKUP_LOCATION_POSITION, DROP_OFF_LOCATION_POSTITION, STATUS) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  // var data = [userId, requestDate, requestTime, pickupLocation, dropoffLocation, estFare, pickupLocationPosition,
+  //   dropoffLocationPostion, status];
 
-  await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
-    //res.json({ requestTime, message: "Trip requested" });
-    //!console.log(req.body)
-    next();
-  });
+  // await MySQLConnection.query(SQLCOMMAND, data, (err, result) => {
+  //   //res.json({ requestTime, message: "Trip requested" });
+  //   //console.log(req.body)
+  //   next();
+  // });
+  next();
 }
 
 exports.getTripsHistory = async (req, res) => {
@@ -211,14 +213,53 @@ exports.driverAcceptRide = async (req, res) => {
   const riderid = whoRequested + riderID;
 
   //!console.log(riderid);
+  //TODO CHECK REDIS DATABASE TO FIND IF TRIP DETAILS FRO THE RIDEID ALREADY EXISTS, IF IT DOES, RETURN TO THE DRIVER THAT THE TRIP IS GONE
+  //TODO ELSE RETURN TO THE DRIVER THAT THE TRIP IS IS ACCEPTED
 
   const riderSocket = connectedUsers.getSocket(riderid);
+  //This disconnects the user who requested the ride from the socket
   io.to(riderSocket).emit("acceptedRide?", req.body);
 
   redisClient.set(`${riderid}`, JSON.stringify(req.body));
 
   const driverid = 'Driver' + driverID + 'Trips';
   redisClient.HSET(driverid, riderid, 'null');
+
+   //get todays date and parse it for sql db
+   const today = new Date();
+   //month goes from 0 to 11
+   var month = today.getMonth() + 1;
+   const requestDate = today.getFullYear() + '-' + month + '-' + today.getDate() + 'Z';
+  //  console.log(requestDate);
+
+  //Save in Mongo
+  const parsedTrip = {
+    USER_ID: req.body.riderID,
+    DRIVER_ID: req.body.driverID,
+    REQUEST_DATE: requestDate,
+    REQUEST_TIME: req.body.requestTime,
+    GREENWICH_MEAN_TIME: req.body.GMT,
+    PICKUP_LOCATION: req.body.pickUpLocation,
+    DROPOFF_LOCATION: req.body.destinationLocation,
+    FARE: req.body.fare,
+    //!LONG LAT FORMAT
+    PICKUP_LOCATION_POSITION: {
+      coordinates: [
+        req.body.pickupLocationPosition[1], // Longitude
+        req.body.pickupLocationPosition[0]  // Latitude
+      ]
+    },
+    DROPOFF_LOCATION_POSITION: {
+      coordinates: [
+        req.body.dropoffLocationPosition[1], // Longitude
+        req.body.dropoffLocationPosition[0]  // Latitude
+      ]
+    }
+  }
+  const Trip = new RideRequest(parsedTrip)
+  Trip.save()
+    .then(() => console.log(info('Ride data saved to database')))
+    .catch(error => console.log(errormessage(`Ride data: ${error}`)));
   //when the driver accepts ride, write a code to keep checking the driver location and when it is close to the 
   //users location, send a notification to the user that the driver has arrived
 };
@@ -431,7 +472,7 @@ exports.onDriverCancelledRide = async (req, res) => {
       token: result[0]["DEVICE_REG_TOKEN"],
     };
 
-    // Send message to driver
+    // Send message to rider
     admin.messaging().send(message)
       .then((response) => {
         console.log(info(`Successfully sent message: ${response}`));
@@ -444,7 +485,7 @@ exports.onDriverCancelledRide = async (req, res) => {
 
 };
 
-//!Dkne This is added to the app
+//!Done This is added to the app
 exports.rateDriver = async (req, res) => {
   const riderID = req.params.riderID;
   const { driverID, rating } = req.body;

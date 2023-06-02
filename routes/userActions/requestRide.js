@@ -1,6 +1,6 @@
 const express = require('express');
 const { requestRide, getTripsHistory, searchForDrivers, driverAcceptRide, getPrice, driverCount, getCurrentRide,
-    driverGetCurrentRides, driverOnRideComplete, onRiderCancelledRide, rateDriver } = require('../../controllers/userActions/requestRide');
+    driverGetCurrentRides, driverOnRideComplete, onRiderCancelledRide, rateDriver, onDriverCancelledRide } = require('../../controllers/userActions/requestRide');
 const { ensureToken } = require('../../controllers/userAuth');
 
 const router = express.Router();
@@ -18,6 +18,7 @@ router.post('/driverOnRideComplete', driverOnRideComplete);
 
 //Ride Cancellation or Ending
 router.post('/:riderID/onRiderCancelledRide', onRiderCancelledRide);
+router.post('/:driverID/onDriverCancelledRide', onDriverCancelledRide)
 
 //Ratings
 router.post('/:riderID/rateDriver', rateDriver);
