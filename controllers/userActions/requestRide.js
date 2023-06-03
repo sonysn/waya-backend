@@ -3,6 +3,7 @@ const serviceAccount = require('../../waya-firebase-servicekey.json');
 const redisClient = require('../../databases/redis_config');
 const { warning, info, errormessage } = require('../../ansi-colors-config');
 const { RideRequest } = require('../../models/requestRide');
+const mongoose = require('mongoose');
 
 //initialize the service account
 admin.initializeApp({
@@ -216,20 +217,12 @@ exports.driverAcceptRide = async (req, res) => {
   //TODO CHECK REDIS DATABASE TO FIND IF TRIP DETAILS FRO THE RIDEID ALREADY EXISTS, IF IT DOES, RETURN TO THE DRIVER THAT THE TRIP IS GONE
   //TODO ELSE RETURN TO THE DRIVER THAT THE TRIP IS IS ACCEPTED
 
-  const riderSocket = connectedUsers.getSocket(riderid);
-  //This disconnects the user who requested the ride from the socket
-  io.to(riderSocket).emit("acceptedRide?", req.body);
-
-  redisClient.set(`${riderid}`, JSON.stringify(req.body));
-
-  const driverid = 'Driver' + driverID + 'Trips';
-  redisClient.HSET(driverid, riderid, 'null');
-
-   //get todays date and parse it for sql db
-   const today = new Date();
-   //month goes from 0 to 11
-   var month = today.getMonth() + 1;
-   const requestDate = today.getFullYear() + '-' + month + '-' + today.getDate() + 'Z';
+  //get todays date and parse it for sql db
+  const today = new Date();
+  //month goes from 0 to 11
+  var month = today.getMonth() + 1;
+  //INFO: 'Z' IS FOR TIMEZONE FORMATTING IN MONGO, TIME IS ALREADY CORRECT
+  const requestDate = today.getFullYear() + '-' + month + '-' + today.getDate() + 'Z';
   //  console.log(requestDate);
 
   //Save in Mongo
@@ -258,7 +251,23 @@ exports.driverAcceptRide = async (req, res) => {
   }
   const Trip = new RideRequest(parsedTrip)
   Trip.save()
-    .then(() => console.log(info('Ride data saved to database')))
+    .then((result) => {
+      console.log(info('Ride data saved to database'));
+      const objectId = result._id;
+      //console.log(objectId);
+      req.body.objectId = objectId;
+      // Use the `objectId` as needed 
+
+      const riderSocket = connectedUsers.getSocket(riderid);
+      //This disconnects the user who requested the ride from the socket
+      io.to(riderSocket).emit("acceptedRide?", req.body);
+
+      redisClient.set(`${riderid}`, JSON.stringify(req.body));
+
+      const driverid = 'Driver' + driverID + 'Trips';
+      redisClient.HSET(driverid, riderid, 'null');
+
+    })
     .catch(error => console.log(errormessage(`Ride data: ${error}`)));
   //when the driver accepts ride, write a code to keep checking the driver location and when it is close to the 
   //users location, send a notification to the user that the driver has arrived
@@ -370,7 +379,7 @@ exports.driverGetCurrentRides = async (req, res) => {
  */
 exports.driverOnRideComplete = async (req, res) => {
   //TODO: ADD CODE TO SAVE RIDE TO DATABASE WITH THE INFO IN THE DB BEFORE DELETING THE RIDE OFF AND ADD TO APP
-  const { driverID, riderID } = req.body;
+  const { driverID, riderID, objectID } = req.body;
   const riderIDFormat = 'Rider' + riderID;
   const driverIDFormat = 'Driver' + driverID + 'Trips';
 
@@ -386,13 +395,55 @@ exports.driverOnRideComplete = async (req, res) => {
     redisClient.del(driverIDFormat); // Delete the key if it's empty
   }
 
+  SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM users WHERE ID = ?`
+  await MySQLConnection.query(SQLCOMMAND, riderID, async (err, result) => {
+    if (err) {
+      console.log(errormessage(`MYSQL ERROR: ${err}`));
+    }
+    // Send message to rider device
+    const message = {
+      notification: {
+        title: `Trip Completed`,
+        body: `The Driver Ended the Ride`
+      },
+      token: result[0]["DEVICE_REG_TOKEN"],
+    };
+
+    // Send message to rider
+    admin.messaging().send(message)
+      .then((response) => {
+        console.log(info(`Successfully sent message: ${response}`));
+      })
+      .catch((error) => {
+        console.error(errormessage(`Failed to send message: ${error}`));
+      });
+  });
+
+  //UPDATE FIELDS IN DB
+  // Define the update data
+  const updateData = {
+    // Specify the fields you want to update
+    STATUS: 'Completed'
+  };
+
+
+  // Update the document with the specified USER_ID
+  // Set the specified fields in the updateData object
+  // Increment the __v field by 1 to indicate a version update
+  // Sort the documents based on the sortOptions
+  //objectID from the req.body
+  const result = await RideRequest.updateOne(
+    { _id: new mongoose.Types.ObjectId(objectID) },
+    { $set: updateData, $inc: { __v: 1 } }
+  );
+
   res.sendStatus(200); // Send a 200 status code indicating success
 }
 
 //!Done this is added to the app
 exports.onRiderCancelledRide = async (req, res) => {
   const riderID = req.params.riderID;
-  const { driverID } = req.body;
+  const { driverID, objectID } = req.body;
 
   const riderIDFormat = 'Rider' + riderID;
   const driverIDFormat = 'Driver' + driverID + 'Trips';
@@ -434,13 +485,30 @@ exports.onRiderCancelledRide = async (req, res) => {
       });
   });
 
+  //UPDATE FIELDS IN DB
+  // Define the update data
+  const updateData = {
+    // Specify the fields you want to update
+    STATUS: 'Cancelled'
+  };
+
+  // Update the document with the specified USER_ID
+  // Set the specified fields in the updateData object
+  // Increment the __v field by 1 to indicate a version update
+  // Sort the documents based on the sortOptions
+  //objectID from the req.body
+  const result = await RideRequest.updateOne(
+    { _id: new mongoose.Types.ObjectId(objectID) },
+    { $set: updateData, $inc: { __v: 1 } }
+  );
+
   res.sendStatus(200); // Send a 200 status code indicating success
 };
 
-
+//!Done this has been added to the app
 exports.onDriverCancelledRide = async (req, res) => {
   const driverID = req.params.driverID;
-  const { riderID } = req.body;
+  const { riderID, objectID } = req.body;
 
   const riderIDFormat = 'Rider' + riderID;
   const driverIDFormat = 'Driver' + driverID + 'Trips';
@@ -458,16 +526,16 @@ exports.onDriverCancelledRide = async (req, res) => {
   }
 
   SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM users WHERE ID = ?`
-  await MySQLConnection.query(SQLCOMMAND, driverID, async (err, result) => {
+  await MySQLConnection.query(SQLCOMMAND, riderID, async (err, result) => {
     if (err) {
       console.log(errormessage(`MYSQL ERROR: ${err}`));
     }
 
-    // Send message to driver device
+    // Send message to rider device
     const message = {
       notification: {
         title: `New Notification`,
-        body: `the Driver Cancelled The Request`
+        body: `The Driver Cancelled The Request`
       },
       token: result[0]["DEVICE_REG_TOKEN"],
     };
@@ -483,6 +551,24 @@ exports.onDriverCancelledRide = async (req, res) => {
   });
 
 
+  //UPDATE FIELDS IN DB
+  // Define the update data
+  const updateData = {
+    // Specify the fields you want to update
+    STATUS: 'Cancelled'
+  };
+
+  // Update the document with the specified USER_ID
+  // Set the specified fields in the updateData object
+  // Increment the __v field by 1 to indicate a version update
+  // Sort the documents based on the sortOptions
+  //objectID from the req.body
+  const result = await RideRequest.updateOne(
+    { _id: new mongoose.Types.ObjectId(objectID) },
+    { $set: updateData, $inc: { __v: 1 } }
+  );
+
+  res.sendStatus(200); // Send a 200 status code indicating success
 };
 
 //!Done This is added to the app
