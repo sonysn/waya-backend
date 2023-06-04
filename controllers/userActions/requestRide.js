@@ -571,7 +571,7 @@ exports.onDriverCancelledRide = async (req, res) => {
   res.sendStatus(200); // Send a 200 status code indicating success
 };
 
-//!Done This is added to the app
+//!Done This is added to the app Not exactly
 exports.rateDriver = async (req, res) => {
   const riderID = req.params.riderID;
   const { driverID, rating } = req.body;
@@ -590,6 +590,32 @@ exports.rateDriver = async (req, res) => {
   });
   res.sendStatus(200); // Send a 200 status code indicating success
 };
+
+//!Added to app
+exports.getRiderTripHistory = async (req, res) => {
+  try {
+    USER_ID = req.params.riderID;
+
+    const data = await RideRequest.find({ USER_ID }).exec();
+    res.status(200).json(data);
+  } catch (error) {
+    console.error(errormessage(`${error}`));
+    res.status(500).json({ message: 'An error occurred' });
+  }
+}
+
+//TODO ADD TO THE APP WITH CATEGORIES
+exports.getDriverTripHistory = async (req, res) => {
+  try {
+    DRIVER_ID = req.params.driverID;
+
+    const data = await RideRequest.find({ DRIVER_ID }).exec();
+    res.status(200).json(data);
+  } catch (error) {
+    console.error(errormessage(`${error}`));
+    res.status(500).json({ message: 'An error occurred' });
+  }
+}
 
 //NO USE OF THIS FUNCTION
 //WEBSOCKET REQUESTS BELOW HERE
