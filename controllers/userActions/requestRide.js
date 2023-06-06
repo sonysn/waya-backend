@@ -118,10 +118,17 @@ exports.searchForDrivers = async (req, res) => {
 
   for (let i = 0; i < reply.length; i++) {
     const response = JSON.parse(reply[i]);
-    const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`);
 
+    // Get the online driver data
+    const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`);
+    const getOnlineDriverWhoAreVerifiedOnlyParsedJSON = JSON.parse(getOnlineDriverWhoAreVerifiedOnly);
+
+    // Check if the driver is verified
     if (getOnlineDriverWhoAreVerifiedOnly) {
-      if (response.verified === true) {
+
+      // Check if the driver is verified and has no destination point set
+      if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint.length === 0) {
+        // Query the database to get the driver's device registration token
         SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
         await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
           if (err) {
@@ -155,6 +162,53 @@ exports.searchForDrivers = async (req, res) => {
         });
 
         driversAvailable = true;
+      }
+
+      // Check if the driver is verified and has a destination point set
+      if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint.length != 0) {
+        console.log('something here...');
+
+        // Calculate the distance between the drop-off location and the driver's destination point
+        const distance = calculateDistance(dropoffLocationPostion, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint)
+        console.log("distance from driver: ", distance);
+
+        // Check if the distance is within the specified range currently 7km or 7000m range
+        if (distance < 7000) {
+          // Query the database to get the driver's device registration token
+          SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
+          await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+            if (err) {
+              console.log(errormessage(`MYSQL ERROR: ${err}`));
+              return res.status(500).json("Internal server error");
+            }
+
+            // Send message to driver device even when app is killed
+            const message = {
+              notification: {
+                title: `New Ride!`,
+                body: `Someone is requesting a ride from ${pickupLocation}`
+              },
+              token: result[0]["DEVICE_REG_TOKEN"],
+            };
+
+            // Send message to driver
+            admin.messaging().send(message)
+              .then((response) => {
+                console.log(info(`Successfully sent message: ${response}`));
+              })
+              .catch((error) => {
+                console.error(errormessage(`Failed to send message: ${error}`));
+              });
+
+            const who = "Driver";
+            const driverid = who + response.driverID;
+
+            const driversocket = connectedUsers.getSocket(driverid);
+            io.to(driversocket).emit("ridenotifications", req.body);
+          });
+
+          driversAvailable = true;
+        }
       }
     }
   }
@@ -617,6 +671,27 @@ exports.getDriverTripHistory = async (req, res) => {
   }
 }
 
+function calculateDistance(riderDestinationPoint, driverDestinationPoint) {
+  const lat1 = riderDestinationPoint[0]
+  const lon1 = riderDestinationPoint[1]
+  const lat2 = driverDestinationPoint[0]
+  const lon2 = driverDestinationPoint[1]
+
+  const R = 6371e3; // Earth's radius in meters
+  const phi1 = lat1 * Math.PI / 180; // convert degrees to radians
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) *
+    Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  const d = R * c; // distance in meters
+
+  return d;
+}
 //NO USE OF THIS FUNCTION
 //WEBSOCKET REQUESTS BELOW HERE
 //websocket request

@@ -59,9 +59,9 @@ exports.locationUpdatePing = async (req, res) => {
     const { locationPoint, timeStamp } = req.body;
     const driver_ID = req.params.driverID;
     //console.log("Location:", locationPoint)
-    
+
     //THIS IS LONG LAT BELOW
-    console.log(locationPoint[1], locationPoint[0])
+    //console.log(locationPoint[1], locationPoint[0])
 
     const locationInLongLat = [locationPoint[1], locationPoint[0]]
     SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationInLongLat}) WHERE ID = ?; 
@@ -82,7 +82,7 @@ exports.availability = async (req, res) => {
 //WEBSOCKET REQUEST BELOW HERE
 
 //websocket location update
-exports.locationUpdateWT = (locationPoint, driver_ID, verificationStatus) => {
+exports.locationUpdateWT = (locationPoint, driver_ID, verificationStatus, driverDestPoint) => {
     //BUG NOTE
     //FORMAT FROM THE APP IS (LAT, LONG)
     //UPDATED: SQL format is (LONG, LAT)
@@ -91,12 +91,18 @@ exports.locationUpdateWT = (locationPoint, driver_ID, verificationStatus) => {
         driverID: driver_ID,
         verified: verificationStatus
     }
+    const membersData = {
+        driverID: driver_ID,
+        verified: verificationStatus,
+        destinationPoint: driverDestPoint
+    }
+
     redisClient.multi()
-    .geoAdd('driverLocations', { longitude: locationPoint[1], latitude: locationPoint[0], member: JSON.stringify(members)})
-    .set(`Driver${members.driverID}`, JSON.stringify(members))
-    .expire(`Driver${members.driverID}`, 10)
-    .exec();
-    
+        .geoAdd('driverLocations', { longitude: locationPoint[1], latitude: locationPoint[0], member: JSON.stringify(members) })
+        .set(`Driver${members.driverID}`, JSON.stringify(membersData))
+        .expire(`Driver${members.driverID}`, 10)
+        .exec();
+    // console.log(dest)
     //DONE I'VE REMOVED THIS
     // SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
     // MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
