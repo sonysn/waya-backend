@@ -32,7 +32,7 @@ exports.validateSignUp = async (req, res, next) => {
 
 function capitalizeFirstLetter(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
-  }
+}
 
 exports.signup = async (req, res) => {
     //to be requested from user
@@ -102,7 +102,7 @@ exports.signin = async (req, res) => {
                     res.json({ token, result, message: "Logged In" });
                 });
             } else {
-                res.json({ message: "Wrong Password or Email" });
+                res.status(401).send({ message: "Wrong Password or Email" });
             }
         });
     })
@@ -111,29 +111,52 @@ exports.signin = async (req, res) => {
 exports.logout = async (req, res) => {
     const { id } = req.body;
     const SQLCOMMAND = `UPDATE users SET DEVICE_REG_TOKEN = NULL WHERE ID = ?;`
-    MySQLConnection.query(SQLCOMMAND, id, function (err, result){
-        if (err){console.log(errormessage(`Logout SQL Error: ${err}`))}
+    MySQLConnection.query(SQLCOMMAND, id, function (err, result) {
+        if (err) { console.log(errormessage(`Logout SQL Error: ${err}`)) }
     });
     res.sendStatus(200);
 };
 
 exports.changePassword = async (req, res) => {
-    const { userId, newPassword } = req.body;
-    //TODO: make sure this does not break cause frankly it should be broken
-    bcrypt.genSalt(function (err, salt) {
-        bcrypt.hash(newPassword, salt, async function (err, hash) {
-            const SQLCOMMAND = `UPDATE users SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
-            await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
-                if (err) {
-                    res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
-                }
-                else {
-                    return res.json({ message: "Password Changed" });
-                }
-            })
+    const { userId, newPassword, oldPassword } = req.body;
+
+    const SQLCOMMAND = `SELECT PASSWORD FROM users where ID = ?;`;
+    MySQLConnection.query(SQLCOMMAND, userId, function (err, result) {
+        if (err) res.sendStatus(500);
+
+        bcrypt.compare(oldPassword, result[0].PASSWORD, function (err, result) {
+            if (result) {
+                bcrypt.genSalt(process.env.SALTROUNDS | 0, function (err, salt) {
+                    bcrypt.hash(newPassword, salt, function (err, hash) {
+                        const SQLCOMMAND1 = `UPDATE users SET PASSWORD = ? WHERE ID = ?;`;
+                        MySQLConnection.query(SQLCOMMAND1, [hash, userId], function (err, result) {
+                            if (err) res.sendStatus(500);
+                            res.sendStatus(200);
+                        });
+                    });
+                });
+            } else {
+                res.status(401).send({ message: "Wrong Password" });
+            }
         })
     })
 }
+
+exports.forgotPassword = async (req, res, next) => {
+    const { email, phoneNumber } = req.body;
+
+    const SQLCOMMAND = `SELECT ID FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
+    MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
+        if (result.length != 0) {
+            console.log('Someone exists')
+            const user = result[0].ID
+            console.log(result)
+            next();
+        } if (result.length === 0) {
+            res.sendStatus(404);
+        }
+    })
+};
 
 //verify tokens from headers
 exports.ensureToken = async (req, res, next) => {
