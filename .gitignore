@@ -2,3 +2,4 @@
 waya-firebase-servicekey.json
 node_modules
 .eslintrc.json
+tsconfig.json
