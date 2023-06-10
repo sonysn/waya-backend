@@ -14,5 +14,5 @@ router.get('/genemailtoken', userAuth_1.genEmailToken);
 router.get('/verifyemail', userAuth_1.verifyEmailToken);
 router.post('/logoutuser', userAuth_1.logout);
 router.post('/forgotPassword', userAuth_1.forgotPassword);
-router.post('/forgotPasswordChange', userAuth_1.forgotPasswordChange);
+router.post('/verifyForgotPasswordChange', userAuth_1.forgotPasswordChange);
 module.exports = router;

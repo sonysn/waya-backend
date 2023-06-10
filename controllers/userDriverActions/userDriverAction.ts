@@ -90,31 +90,66 @@ exports.availability = async (req: Request, res: Response) => {
 
 //WEBSOCKET REQUEST BELOW HERE
 
-//websocket location update
-export const locationUpdateWT = (locationPoint: number[], driver_ID: number, verificationStatus: boolean, driverDestPoint: number[]) => {
-    //BUG NOTE
-    //FORMAT FROM THE APP IS (LAT, LONG)
-    //UPDATED: SQL format is (LONG, LAT)
-    //REDIS FORMAT IS (LONG, LAT)
+/**
+ * TYPE NOTE
+ * FORMAT FROM THE APP IS (LAT, LONG)
+ * UPDATED: SQL format is (LONG, LAT)
+ * REDIS FORMAT IS (LONG, LAT)
+ * Update the location of a driver in a Redis database for real-time tracking.
+ * @param locationPoint - Array of latitude and longitude of the driver's current location.
+ * @param driver_ID - ID of the driver.
+ * @param verificationStatus - Indicates if the driver's identity has been verified.
+ * @param driverDestPoint - Array of latitude and longitude of the driver's destination.
+ * @param driverDestPoint - Returns [null, null] if array is empty [] or null
+ */
+export const locationUpdateWT = (locationPoint: [number, number], driver_ID: number, verificationStatus: boolean, driverDestPoint: [number, number]) => {
+    // Type definition for the coordinates.
+    type Coordinates = {
+        latitude: number;
+        longitude: number;
+    };
+
+    // Create a coordinate object from the location point array.
+    const driverCurrentLocation: Coordinates = {
+        latitude: locationPoint[0],
+        longitude: locationPoint[1],
+    };
+
+    // Create a coordinate object from the destination point array.
+    const driverSetDestination: Coordinates = {
+        latitude: driverDestPoint[0],
+        longitude: driverDestPoint[1],
+    };
+
+    // Create an array of latitude and longitude from the destination coordinate object.
+    const driverSetDestinationArray: [number, number] = [
+        driverSetDestination.latitude,
+        driverSetDestination.longitude,
+    ];
+
+    // Create an object to store the driver ID and verification status.
     const members = {
         driverID: driver_ID,
-        verified: verificationStatus
-    }
+        verified: verificationStatus,
+    };
+
+    // Create an object to store the driver ID, verification status, and destination point.
     const membersData = {
         driverID: driver_ID,
         verified: verificationStatus,
-        destinationPoint: driverDestPoint
-    }
+        destinationCoordinates: driverSetDestinationArray,
+    };
 
+    // Add the driver's current location to the Redis database.
     redisClient.multi()
-        .geoAdd('driverLocations', { longitude: locationPoint[1], latitude: locationPoint[0], member: JSON.stringify(members) })
+        .geoAdd('driverLocations', {
+            longitude: driverCurrentLocation.longitude,
+            latitude: driverCurrentLocation.latitude,
+            member: JSON.stringify(members),
+        })
+        // Set the driver's data in the Redis database.
         .set(`Driver${members.driverID}`, JSON.stringify(membersData))
+        // Set an expiration of 10 seconds for the driver's data in the Redis database.
         .expire(`Driver${members.driverID}`, 10)
         .exec();
-    // console.log(dest)
-    //DONE I'VE REMOVED THIS
-    // SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationPoint}) WHERE ID LIKE ?;`
-    // MySQLConnection.query(SQLCOMMAND, [driver_ID], (err, result) => {
-    //     //console.log('driver location update success!');
-    // })
-}
+};

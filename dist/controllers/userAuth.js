@@ -169,14 +169,17 @@ const forgotPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
     const { email, phoneNumber } = req.body;
     const SQLCOMMAND = `SELECT ID, EMAIL FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
     index_1.MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
+        if (result.length === 0) {
+            return res.sendStatus(404);
+        }
         if (result.length != 0) {
             console.log('Someone exists');
-            const user = result[0].ID;
+            //const user = result[0].ID
             const emailFromDB = result[0].EMAIL;
-            console.log(result);
+            //console.log(result)
             //start
             const key = crypto_1.default.randomBytes(3);
-            const token = parseInt(key.toString('hex'), 16).toString().substring(0, 6);
+            const token = parseInt(key.toString('hex'), 16).toString().substring(0, 4);
             console.log(token);
             let mailOptions = {
                 from: 'admin@yousellquick.com',

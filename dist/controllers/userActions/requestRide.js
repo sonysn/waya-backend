@@ -121,7 +121,8 @@ exports.searchForDrivers = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Check if the driver is verified
         if (getOnlineDriverWhoAreVerifiedOnly) {
             // Check if the driver is verified and has no destination point set
-            if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint.length === 0) {
+            if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[0] === null &&
+                getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[1] === null) {
                 // Query the database to get the driver's device registration token
                 const SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
                 yield __1.MySQLConnection.query(SQLCOMMAND, (err, result) => __awaiter(void 0, void 0, void 0, function* () {
@@ -153,7 +154,7 @@ exports.searchForDrivers = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 driversAvailable = true;
             }
             // Check if the driver is verified and has a destination point set
-            if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint.length != 0) {
+            if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[0] != null, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[1] != null) {
                 console.log('something here...');
                 // Calculate the distance between the drop-off location and the driver's destination point
                 const distance = calculateDistance(dropoffLocationPostion, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint);
