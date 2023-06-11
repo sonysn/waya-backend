@@ -64,21 +64,35 @@ export const ensureToken = async (req: Request, res: Response, next: NextFunctio
 
 
 exports.locationUpdatePing = async (req: Request, res: Response) => {
-    //FORMAT FROM APP IS LAT, LONG
     const { locationPoint, timeStamp } = req.body;
     const driver_ID = req.params.driverID;
-    //console.log("Location:", locationPoint)
 
-    //THIS IS LONG LAT BELOW
-    //console.log(locationPoint[1], locationPoint[0])
+    // Type definition for the coordinates.
+    type Coordinates = {
+        latitude: number;
+        longitude: number;
+    };
 
-    const locationInLongLat = [locationPoint[1], locationPoint[0]]
-    const SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${locationInLongLat}) WHERE ID = ?; 
-    UPDATE driver SET LOCATION_LAST_PING = ? WHERE ID = ?; `;
-    await MySQLConnection.query(SQLCOMMAND, [driver_ID, timeStamp, driver_ID], (err, result) => {
+    const driverCurrentCoordinates: Coordinates = {
+        latitude: req.body.locationPoint[0],
+        longitude: req.body.locationPoint[1],
+    }
+
+    //MYSQL DB TAKES IN LONG LAT FORMAT
+    const driverCurrentCoordinatesArray: [number, number] = [
+        driverCurrentCoordinates.longitude,
+        driverCurrentCoordinates.latitude
+    ]
+
+    const SQLCOMMAND = `UPDATE driver SET CURRENT_LOCATION = POINT(${driverCurrentCoordinatesArray}), LOCATION_LAST_PING = ? WHERE ID = ?;`;
+    MySQLConnection.query(SQLCOMMAND, [timeStamp, driver_ID], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.sendStatus(500);
+        }
         return res.sendStatus(200);
-    })
-}
+    });
+};
 
 exports.availability = async (req: Request, res: Response) => {
     const { availabilityStatus, driverID } = req.body;

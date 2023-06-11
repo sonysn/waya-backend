@@ -96,6 +96,7 @@ exports.requestRide = async (req: Request, res: Response, next: NextFunction) =>
   next();
 }
 
+//TODO: IS THIS BEING USED?
 exports.getTripsHistory = async (req: Request, res: Response) => {
   const userId = req.params.userId;
 
@@ -133,7 +134,7 @@ exports.searchForDrivers = async (req: Request, res: Response) => {
 
   //!console.log(pickupLocationPosition);
 
-  const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, 100, 'km');
+  const reply = await redisClient.geoRadius('driverLocations', { longitude: pickupLocationPosition[1], latitude: pickupLocationPosition[0] }, Number(process.env.RIDE_RANGE), 'km');
 
 
   if (reply.length === 0) {
@@ -142,68 +143,103 @@ exports.searchForDrivers = async (req: Request, res: Response) => {
 
   let driversAvailable = false;
 
+  /*Structure
+   * type Driver = {
+   *  driverID: number,
+   * verified: boolean,
+   * destinationCoordinates: [number, number] or [null, null]
+   *}*/
+
   for (let i = 0; i < reply.length; i++) {
     const response = JSON.parse(reply[i]);
 
     // Get the online driver data
     const getOnlineDriverWhoAreVerifiedOnly = await redisClient.get(`Driver${response.driverID}`);
-    const getOnlineDriverWhoAreVerifiedOnlyParsedJSON = JSON.parse(getOnlineDriverWhoAreVerifiedOnly);
+    const getOnlineDriverWhoAreVerifiedOnlyParsedJSON = JSON.parse(getOnlineDriverWhoAreVerifiedOnly); //this returns true or false
 
     // Check if the driver is verified
     if (getOnlineDriverWhoAreVerifiedOnly) {
 
       // Check if the driver is verified and has no destination point set
-      if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[0] === null &&
-        getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[1] === null) {
-        // Query the database to get the driver's device registration token
-        const SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
-        await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
-          if (err) {
-            console.log(errormessage(`MYSQL ERROR: ${err}`));
-            return res.status(500).json("Internal server error");
-          }
+      if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates[0] === null &&
+        getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates[1] === null) {
 
-          // Send message to driver device even when app is killed
-          const message = {
-            notification: {
-              title: `New Ride!`,
-              body: `Someone is requesting a ride from ${pickupLocation}`
-            },
-            token: result[0]["DEVICE_REG_TOKEN"],
-          };
+        // Get the current rides for the driver from Redis
+        const driverid = 'Driver' + response.driverID + 'Trips';
+        const getDriverCurrentRides = await redisClient.HGETALL(driverid);
 
-          // Send message to driver
-          admin.messaging().send(message)
-            .then((response: string) => {
-              console.log(info(`Successfully sent message: ${response}`));
-            })
-            .catch((error: string) => {
-              console.error(errormessage(`Failed to send message: ${error}`));
-            });
+        // Get the fields of the driver's current rides and log the number of fields
+        // This is just for debugging purposes and can be removed in production
+        const currentRides = Object.keys(getDriverCurrentRides);
+        console.log(currentRides.length);
 
-          const who = "Driver";
-          const driverid = who + response.driverID;
+        const maxRidersPerDriver = Number(process.env.MAXIMUM_RIDERS_PER_DRIVER);
+        if (currentRides.length < maxRidersPerDriver) {
+          // Query the database to get the driver's device registration token
+          const SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
+          MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+            if (err) {
+              console.log(errormessage(`MYSQL ERROR: ${err}`));
+              return res.status(500).json("Internal server error");
+            }
 
-          const driversocket = connectedUsers.getSocket(driverid);
-          io.to(driversocket).emit("ridenotifications", req.body);
-        });
+            // Send message to driver device even when app is killed
+            const message = {
+              notification: {
+                title: `New Ride!`,
+                body: `Someone is requesting a ride from ${pickupLocation}`
+              },
+              token: result[0]["DEVICE_REG_TOKEN"],
+            };
 
-        driversAvailable = true;
+            // Send message to driver
+            admin.messaging().send(message)
+              .then((response: string) => {
+                console.log(info(`Successfully sent message: ${response}`));
+              })
+              .catch((error: string) => {
+                console.error(errormessage(`Failed to send message: ${error}`));
+              });
+
+            const who = "Driver";
+            const driverid = who + response.driverID;
+
+            const driversocket = connectedUsers.getSocket(driverid);
+            io.to(driversocket).emit("ridenotifications", req.body);
+          });
+
+          driversAvailable = true;
+        }
+
+
       }
 
       // Check if the driver is verified and has a destination point set
-      if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[0] != null, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint[1] != null) {
+      if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates[0] != null, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates[1] != null) {
         console.log('something here...');
 
         // Calculate the distance between the drop-off location and the driver's destination point
-        const distance = calculateDistance(dropoffLocationPostion, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationPoint)
-        console.log("distance from driver: ", distance);
+        const distance = calculateDistance(dropoffLocationPostion, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates)
+        console.log("distance from driver: ", distance, "m");
+
+        // Get the current rides for the driver from Redis
+        const driverid = 'Driver' + response.driverID + 'Trips';
+        const getDriverCurrentRides = await redisClient.HGETALL(driverid);
+
+        // Get the fields of the driver's current rides and log the number of fields
+        // This is just for debugging purposes and can be removed in production
+        const currentRides = Object.keys(getDriverCurrentRides);
+        console.log(currentRides.length);
+
+        //Check if the driver has more than maximum number of riders to prevent notification from being sent to them
+        const maxRidersPerDriver = Number(process.env.MAXIMUM_RIDERS_PER_DRIVER);
 
         // Check if the distance is within the specified range currently 7km or 7000m range
-        if (distance < 7000) {
+        if (currentRides.length < maxRidersPerDriver && distance < 7000) {
+
           // Query the database to get the driver's device registration token
           const SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
-          await MySQLConnection.query(SQLCOMMAND, async (err, result) => {
+          MySQLConnection.query(SQLCOMMAND, async (err, result) => {
             if (err) {
               console.log(errormessage(`MYSQL ERROR: ${err}`));
               return res.status(500).json("Internal server error");
@@ -364,7 +400,7 @@ exports.driverCount = async (req: Request, res: Response) => {
   //     CURRENT_LOCATION
   //   ) as distance FROM driver WHERE AVAILABILITY = true
   // ) AS LOCATION WHERE distance < 10000`;
-  const reply = await redisClient.geoRadius('driverLocations', { longitude: outputLoc[1], latitude: outputLoc[0] }, 100, 'km');
+  const reply = await redisClient.geoRadius('driverLocations', { longitude: outputLoc[1], latitude: outputLoc[0] }, Number(process.env.RIDE_RANGE), 'km');
 
   var driverCount = 0;
 
@@ -698,11 +734,11 @@ exports.getDriverTripHistory = async (req: Request, res: Response) => {
   }
 }
 
-function calculateDistance(riderDestinationPoint: number[], driverDestinationPoint: number[]) {
-  const lat1 = riderDestinationPoint[0]
-  const lon1 = riderDestinationPoint[1]
-  const lat2 = driverDestinationPoint[0]
-  const lon2 = driverDestinationPoint[1]
+function calculateDistance(riderdestinationCoordinates: number[], driverdestinationCoordinates: number[]) {
+  const lat1 = riderdestinationCoordinates[0]
+  const lon1 = riderdestinationCoordinates[1]
+  const lat2 = driverdestinationCoordinates[0]
+  const lon2 = driverdestinationCoordinates[1]
 
   const R = 6371e3; // Earth's radius in meters
   const phi1 = lat1 * Math.PI / 180; // convert degrees to radians

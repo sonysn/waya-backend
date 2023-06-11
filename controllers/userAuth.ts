@@ -160,7 +160,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
             return res.sendStatus(404);
         }
         if (result.length != 0) {
-            console.log('Someone exists')
+            //console.log('Someone exists')
             //const user = result[0].ID
             const emailFromDB = result[0].EMAIL
             //console.log(result)
@@ -176,7 +176,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
                 text: `Hello there, your OTP is ${token}. It expires in 3 minutes.` // plain text body
             }
             try {
-                //await transporter.sendMail(mailOptions);
+                transporter.sendMail(mailOptions);
                 res.json({ message: "Email Sent! Check your email" });
                 redisClient.setEx(emailFromDB, 180, token);
             } catch (error) {

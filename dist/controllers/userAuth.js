@@ -173,7 +173,7 @@ const forgotPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
             return res.sendStatus(404);
         }
         if (result.length != 0) {
-            console.log('Someone exists');
+            //console.log('Someone exists')
             //const user = result[0].ID
             const emailFromDB = result[0].EMAIL;
             //console.log(result)
@@ -188,7 +188,7 @@ const forgotPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
                 text: `Hello there, your OTP is ${token}. It expires in 3 minutes.` // plain text body
             };
             try {
-                //await transporter.sendMail(mailOptions);
+                index_1.transporter.sendMail(mailOptions);
                 res.json({ message: "Email Sent! Check your email" });
                 redis_config_1.default.setEx(emailFromDB, 180, token);
             }
