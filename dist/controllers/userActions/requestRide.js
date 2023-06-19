@@ -20,6 +20,7 @@ const { RideRequest } = require('../../models/requestRide').default;
 const mongoose = require('mongoose');
 const __1 = require("../..");
 const sockets_1 = require("../../sockets");
+//!Driver Trip History is in this file
 //initialize the service account
 firebase_admin_1.default.initializeApp({
     credential: firebase_admin_1.default.credential.cert(serviceAccount),
@@ -186,7 +187,7 @@ exports.searchForDrivers = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 //Check if the driver has more than maximum number of riders to prevent notification from being sent to them
                 const maxRidersPerDriver = Number(process.env.MAXIMUM_RIDERS_PER_DRIVER);
                 // Check if the distance is within the specified range currently 7km or 7000m range
-                if (currentRides.length <= maxRidersPerDriver && distance < 7000) {
+                if (currentRides.length < maxRidersPerDriver && distance < 7000) {
                     // Query the database to get the driver's device registration token
                     const SQLCOMMAND = `SELECT DEVICE_REG_TOKEN FROM driver WHERE ID = ${response.driverID}`;
                     __1.MySQLConnection.query(SQLCOMMAND, (err, result) => __awaiter(void 0, void 0, void 0, function* () {

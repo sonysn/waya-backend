@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require('express');
-const { signup, validateSignUp, ValidateSignin, signin, genEmailToken, verifyEmailToken, changePassword, logout } = require('../controllers/userDriverAuth');
+const userDriverAuth_1 = require("../controllers/userDriverAuth");
 const { upload } = require('../databases/upload_config');
 const userDriverAuthValidator_1 = require("./../validator/userDriverAuthValidator");
 const router = express.Router();
@@ -16,10 +16,12 @@ router.post('/driversignup', upload.fields([
     { name: 'profilePhoto' },
     { name: 'driversLicense' },
     { name: 'vehicleInsurance' },
-]), userDriverAuthValidator_1.userDriverSignupValidator, validateSignUp, signup);
-router.post('/driversignin', ValidateSignin, signin);
-router.post('/driverchangepassword', changePassword);
-router.get('/genemailtokendriver', genEmailToken);
-router.get('/verifyemaildriver', verifyEmailToken);
-router.post('/logout', logout);
+]), userDriverAuthValidator_1.userDriverSignupValidator, userDriverAuth_1.validateSignUp, userDriverAuth_1.signup);
+router.post('/driversignin', userDriverAuth_1.ValidateSignin, userDriverAuth_1.signin);
+router.post('/driverchangepassword', userDriverAuth_1.changePassword);
+router.post('/driverForgotPassword', userDriverAuth_1.forgotPassword);
+router.post('/driverVerifyForgotPasswordChange', userDriverAuth_1.forgotPasswordChange);
+router.get('/genemailtokendriver', userDriverAuth_1.genEmailToken);
+router.get('/verifyemaildriver', userDriverAuth_1.verifyEmailToken);
+router.post('/logout', userDriverAuth_1.logout);
 module.exports = router;

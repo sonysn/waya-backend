@@ -52,7 +52,7 @@ export const signup = async (req: Request, res: Response) => {
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`
     //hash user password
 
-    bcrypt.genSalt(process.env.SALTROUNDS ? Number(process.env.SALTROUNDS) : 10, function (err, salt) {
+    bcrypt.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
         bcrypt.hash(password, salt, async function (err, hash) {
             //console.log(hash);
 
@@ -151,7 +151,7 @@ export const changePassword = async (req: Request, res: Response) => {
     })
 }
 
-export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const forgotPassword = async (req: Request, res: Response) => {
     const { email, phoneNumber } = req.body;
 
     const SQLCOMMAND = `SELECT ID, EMAIL FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
@@ -167,7 +167,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
             //start
             const key = crypto.randomBytes(3);
             const token = parseInt(key.toString('hex'), 16).toString().substring(0, 4);
-            console.log(token)
+            //!console.log(token)
 
             let mailOptions = {
                 from: 'admin@yousellquick.com', // sender address
@@ -177,8 +177,9 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
             }
             try {
                 transporter.sendMail(mailOptions);
+                const data = 'Forgot Password Token For: ' + emailFromDB;
+                redisClient.setEx(data, 180, token);
                 res.json({ message: "Email Sent! Check your email" });
-                redisClient.setEx(emailFromDB, 180, token);
             } catch (error) {
                 console.log(errormessage(`Mailer Error: ${error}`));
             }
@@ -188,19 +189,36 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
     })
 };
 
-export const forgotPasswordChange = async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * This function handles a forgot password change request.
+ * It takes in the request and response objects as well as the next function.
+ * It extracts the necessary information from the request body and constructs two SQL commands.
+ * It queries the MySQL database using the first SQL command to check if the user exists.
+ * If the user does not exist, it sends a 404 status code.
+ * If the user exists, it retrieves the forgot password token from Redis and compares it to the user token.
+ * If the tokens match, it deletes the token from Redis, generates a hash of the new password using bcrypt, and updates the user's password in the database using the second SQL command.
+ * If the tokens do not match, it sends a 401 status code.
+ * If there is an error at any point, it sends a 500 status code.
+ */
+export const forgotPasswordChange = async (req: Request, res: Response) => {
     const { email, phoneNumber, userToken, newPassword } = req.body;
     const SQLCOMMAND1 = `UPDATE users SET PASSWORD = ? WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     const SQLCOMMAND = `SELECT EMAIL FROM users WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`
     MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], async (err, result) => {
         if (err) res.sendStatus(500);
-        const replyToken = await redisClient.get(result[0].EMAIL);
+
+        if (result.length === 0) {
+            return res.sendStatus(404);
+        }
+
+        const data = 'Forgot Password Token For: ' + result[0].EMAIL;
+        const replyToken = await redisClient.get(data);
         console.log(replyToken)
 
         if (replyToken === userToken) {
-            redisClient.del(email);
+            redisClient.del(data);
 
-            bcrypt.genSalt(process.env.SALTROUNDS ? Number(process.env.SALTROUNDS) : 10, function (err, salt) {
+            bcrypt.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
                 bcrypt.hash(newPassword, salt, function (err, hash) {
                     MySQLConnection.query(SQLCOMMAND1, [hash, phoneNumber, email], function (err, result) {
                         if (err) res.sendStatus(500);

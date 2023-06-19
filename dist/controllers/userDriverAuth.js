@@ -12,12 +12,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changePassword = exports.verifyEmailToken = exports.genEmailToken = exports.logout = exports.signin = exports.ValidateSignin = exports.signup = exports.validateSignUp = void 0;
+exports.changePassword = exports.verifyEmailToken = exports.genEmailToken = exports.forgotPasswordChange = exports.forgotPassword = exports.logout = exports.signin = exports.ValidateSignin = exports.signup = exports.validateSignUp = void 0;
 const index_1 = require("../index");
 const imagekit_config_1 = require("../databases/imagekit_config");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const ansi_colors_config_1 = require("../ansi-colors-config");
+const redis_config_1 = __importDefault(require("../databases/redis_config"));
+const crypto_1 = __importDefault(require("crypto"));
 //const saltRounds = 10;
 const delay = (time) => new Promise(res => setTimeout(res, time));
 const validateSignUp = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -194,6 +196,86 @@ const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.sendStatus(200);
 });
 exports.logout = logout;
+const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, phoneNumber } = req.body;
+    const SQLCOMMAND = `SELECT ID, EMAIL FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    index_1.MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => {
+        if (result.length === 0) {
+            return res.sendStatus(404);
+        }
+        if (result.length != 0) {
+            //console.log('Someone exists')
+            //const user = result[0].ID
+            const emailFromDB = result[0].EMAIL;
+            //console.log(result)
+            //start
+            const key = crypto_1.default.randomBytes(3);
+            const token = parseInt(key.toString('hex'), 16).toString().substring(0, 4);
+            //!console.log(token)
+            let mailOptions = {
+                from: 'admin@yousellquick.com',
+                to: `${emailFromDB}`,
+                subject: "Qunot Forgot Password 🔒",
+                text: `Hello there, your OTP is ${token}. It expires in 3 minutes.` // plain text body
+            };
+            try {
+                index_1.transporter.sendMail(mailOptions);
+                const data = 'Driver Forgot Password Token For: ' + emailFromDB;
+                redis_config_1.default.setEx(data, 180, token);
+                res.json({ message: "Email Sent! Check your email" });
+            }
+            catch (error) {
+                console.log((0, ansi_colors_config_1.errormessage)(`Mailer Error: ${error}`));
+            }
+        }
+        if (result.length === 0) {
+            res.sendStatus(404);
+        }
+    });
+});
+exports.forgotPassword = forgotPassword;
+/**
+ * This function handles a forgot password change request.
+ * It takes in the request and response objects as well as the next function.
+ * It extracts the necessary information from the request body and constructs two SQL commands.
+ * It queries the MySQL database using the first SQL command to check if the user exists.
+ * If the user does not exist, it sends a 404 status code.
+ * If the user exists, it retrieves the forgot password token from Redis and compares it to the user token.
+ * If the tokens match, it deletes the token from Redis, generates a hash of the new password using bcrypt, and updates the user's password in the database using the second SQL command.
+ * If the tokens do not match, it sends a 401 status code.
+ * If there is an error at any point, it sends a 500 status code.
+ */
+const forgotPasswordChange = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, phoneNumber, userToken, newPassword } = req.body;
+    const SQLCOMMAND1 = `UPDATE driver SET PASSWORD = ? WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    const SQLCOMMAND = `SELECT EMAIL FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
+    index_1.MySQLConnection.query(SQLCOMMAND, [phoneNumber, email], (err, result) => __awaiter(void 0, void 0, void 0, function* () {
+        if (err)
+            res.sendStatus(500);
+        if (result.length === 0) {
+            return res.sendStatus(404);
+        }
+        const data = 'Driver Forgot Password Token For: ' + result[0].EMAIL;
+        const replyToken = yield redis_config_1.default.get(data);
+        console.log(replyToken);
+        if (replyToken === userToken) {
+            redis_config_1.default.del(data);
+            bcrypt_1.default.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
+                bcrypt_1.default.hash(newPassword, salt, function (err, hash) {
+                    index_1.MySQLConnection.query(SQLCOMMAND1, [hash, phoneNumber, email], function (err, result) {
+                        if (err)
+                            res.sendStatus(500);
+                        res.sendStatus(200);
+                    });
+                });
+            });
+        }
+        else {
+            res.sendStatus(401);
+        }
+    }));
+});
+exports.forgotPasswordChange = forgotPasswordChange;
 //for below
 const token = [];
 const t = [];
