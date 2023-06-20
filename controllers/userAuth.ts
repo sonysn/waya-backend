@@ -135,7 +135,7 @@ export const changePassword = async (req: Request, res: Response) => {
 
         bcrypt.compare(oldPassword, result[0].PASSWORD, function (err, result) {
             if (result) {
-                bcrypt.genSalt(process.env.SALTROUNDS ? Number(process.env.SALTROUNDS) : 10, function (err, salt) {
+                bcrypt.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
                     bcrypt.hash(newPassword, salt, function (err, hash) {
                         const SQLCOMMAND1 = `UPDATE users SET PASSWORD = ? WHERE ID = ?;`;
                         MySQLConnection.query(SQLCOMMAND1, [hash, userId], function (err, result) {

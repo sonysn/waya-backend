@@ -63,7 +63,7 @@ const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const SQLCOMMAND = `INSERT INTO users(FIRST_NAME, LAST_NAME, PASSWORD, PHONE_NUMBER, EMAIL, ADDRESS, DOB, PROFILE_PHOTO, MEANS_OF_ID) 
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);`;
     //hash user password
-    bcrypt_1.default.genSalt(process.env.SALTROUNDS ? Number(process.env.SALTROUNDS) : 10, function (err, salt) {
+    bcrypt_1.default.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
         bcrypt_1.default.hash(password, salt, function (err, hash) {
             return __awaiter(this, void 0, void 0, function* () {
                 //console.log(hash);
@@ -147,7 +147,7 @@ const changePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.sendStatus(500);
         bcrypt_1.default.compare(oldPassword, result[0].PASSWORD, function (err, result) {
             if (result) {
-                bcrypt_1.default.genSalt(process.env.SALTROUNDS ? Number(process.env.SALTROUNDS) : 10, function (err, salt) {
+                bcrypt_1.default.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
                     bcrypt_1.default.hash(newPassword, salt, function (err, hash) {
                         const SQLCOMMAND1 = `UPDATE users SET PASSWORD = ? WHERE ID = ?;`;
                         index_1.MySQLConnection.query(SQLCOMMAND1, [hash, userId], function (err, result) {

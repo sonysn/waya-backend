@@ -190,6 +190,31 @@ export const logout = async (req: Request, res: Response) => {
     res.sendStatus(200);
 };
 
+export const changePassword = async (req: Request, res: Response) => {
+    const { driverId, newPassword, oldPassword } = req.body;
+
+    const SQLCOMMAND = `SELECT PASSWORD FROM driver where ID = ?;`;
+    MySQLConnection.query(SQLCOMMAND, driverId, function (err, result) {
+        if (err) res.sendStatus(500);
+
+        bcrypt.compare(oldPassword, result[0].PASSWORD, function (err, result) {
+            if (result) {
+                bcrypt.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
+                    bcrypt.hash(newPassword, salt, function (err, hash) {
+                        const SQLCOMMAND1 = `UPDATE driver SET PASSWORD = ? WHERE ID = ?;`;
+                        MySQLConnection.query(SQLCOMMAND1, [hash, driverId], function (err, result) {
+                            if (err) res.sendStatus(500);
+                            res.sendStatus(200);
+                        });
+                    });
+                });
+            } else {
+                res.status(401).send({ message: "Wrong Password" });
+            }
+        })
+    })
+}
+
 export const forgotPassword = async (req: Request, res: Response) => {
     const { email, phoneNumber } = req.body;
 
@@ -335,20 +360,20 @@ export const verifyEmailToken = async (req: Request, res: Response) => {
 
 
 
-export const changePassword = async (req: Request, res: Response) => {
-    const { userId, newPassword } = req.body;
-    //TODO: make sure this does not break cause frankly it should be broken
-    bcrypt.genSalt(function (err, salt) {
-        bcrypt.hash(newPassword, salt, async function (err, hash) {
-            const SQLCOMMAND = `UPDATE driver SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
-            await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
-                if (err) {
-                    res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
-                }
-                else {
-                    return res.json({ message: "Password Changed" });
-                }
-            })
-        })
-    })
-}
+// export const changePassword = async (req: Request, res: Response) => {
+//     const { userId, newPassword } = req.body;
+//     //TODO: make sure this does not break cause frankly it should be broken
+//     bcrypt.genSalt(function (err, salt) {
+//         bcrypt.hash(newPassword, salt, async function (err, hash) {
+//             const SQLCOMMAND = `UPDATE driver SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
+//             await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
+//                 if (err) {
+//                     res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
+//                 }
+//                 else {
+//                     return res.json({ message: "Password Changed" });
+//                 }
+//             })
+//         })
+//     })
+// }

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changePassword = exports.verifyEmailToken = exports.genEmailToken = exports.forgotPasswordChange = exports.forgotPassword = exports.logout = exports.signin = exports.ValidateSignin = exports.signup = exports.validateSignUp = void 0;
+exports.verifyEmailToken = exports.genEmailToken = exports.forgotPasswordChange = exports.forgotPassword = exports.changePassword = exports.logout = exports.signin = exports.ValidateSignin = exports.signup = exports.validateSignUp = void 0;
 const index_1 = require("../index");
 const imagekit_config_1 = require("../databases/imagekit_config");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -196,6 +196,32 @@ const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.sendStatus(200);
 });
 exports.logout = logout;
+const changePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { driverId, newPassword, oldPassword } = req.body;
+    const SQLCOMMAND = `SELECT PASSWORD FROM driver where ID = ?;`;
+    index_1.MySQLConnection.query(SQLCOMMAND, driverId, function (err, result) {
+        if (err)
+            res.sendStatus(500);
+        bcrypt_1.default.compare(oldPassword, result[0].PASSWORD, function (err, result) {
+            if (result) {
+                bcrypt_1.default.genSalt(Number(process.env.SALTROUNDS), function (err, salt) {
+                    bcrypt_1.default.hash(newPassword, salt, function (err, hash) {
+                        const SQLCOMMAND1 = `UPDATE driver SET PASSWORD = ? WHERE ID = ?;`;
+                        index_1.MySQLConnection.query(SQLCOMMAND1, [hash, driverId], function (err, result) {
+                            if (err)
+                                res.sendStatus(500);
+                            res.sendStatus(200);
+                        });
+                    });
+                });
+            }
+            else {
+                res.status(401).send({ message: "Wrong Password" });
+            }
+        });
+    });
+});
+exports.changePassword = changePassword;
 const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, phoneNumber } = req.body;
     const SQLCOMMAND = `SELECT ID, EMAIL FROM driver WHERE PHONE_NUMBER LIKE ? OR EMAIL LIKE ?;`;
@@ -331,23 +357,20 @@ const verifyEmailToken = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.verifyEmailToken = verifyEmailToken;
-const changePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId, newPassword } = req.body;
-    //TODO: make sure this does not break cause frankly it should be broken
-    bcrypt_1.default.genSalt(function (err, salt) {
-        bcrypt_1.default.hash(newPassword, salt, function (err, hash) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const SQLCOMMAND = `UPDATE driver SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
-                yield index_1.MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
-                    if (err) {
-                        res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
-                    }
-                    else {
-                        return res.json({ message: "Password Changed" });
-                    }
-                });
-            });
-        });
-    });
-});
-exports.changePassword = changePassword;
+// export const changePassword = async (req: Request, res: Response) => {
+//     const { userId, newPassword } = req.body;
+//     //TODO: make sure this does not break cause frankly it should be broken
+//     bcrypt.genSalt(function (err, salt) {
+//         bcrypt.hash(newPassword, salt, async function (err, hash) {
+//             const SQLCOMMAND = `UPDATE driver SET PASSWORD = "${hash}" WHERE ID LIKE ?;`;
+//             await MySQLConnection.query(SQLCOMMAND, userId, (err, result) => {
+//                 if (err) {
+//                     res.status(500).json({ status: 500, message: "An error occurred: " + err.message });
+//                 }
+//                 else {
+//                     return res.json({ message: "Password Changed" });
+//                 }
+//             })
+//         })
+//     })
+// }
