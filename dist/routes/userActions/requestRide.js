@@ -11,18 +11,18 @@ const router = express_1.default.Router();
 router.post('/requestride', auth_1.checkAuthorization, requestRide, searchForDrivers);
 router.post('/getRidePrice', getPrice);
 router.get('/:userId/getridehistory', auth_1.checkAuthorization, getTripsHistory);
-router.post('/driverAcceptRide', driverAcceptRide);
+router.post('/driverAcceptRide', auth_1.checkAuthorization, driverAcceptRide);
 //Ride information
 router.get('/:locationData/driverCount', driverCount);
 router.get('/:riderID/getCurrentRide', auth_1.checkAuthorization, getCurrentRide);
-router.get('/:driverID/driverGetCurrentRides', driverGetCurrentRides);
-router.post('/driverOnRideComplete', driverOnRideComplete);
+router.get('/:driverID/driverGetCurrentRides', auth_1.checkAuthorization, driverGetCurrentRides);
+router.post('/driverOnRideComplete', auth_1.checkAuthorization, driverOnRideComplete);
 //Ride Cancellation or Ending
 router.post('/:riderID/onRiderCancelledRide', auth_1.checkAuthorization, onRiderCancelledRide);
-router.post('/:driverID/onDriverCancelledRide', onDriverCancelledRide);
+router.post('/:driverID/onDriverCancelledRide', auth_1.checkAuthorization, onDriverCancelledRide);
 //Ratings
 router.post('/:riderID/rateDriver', auth_1.checkAuthorization, rateDriver);
 //Trip Histories
 router.get('/:riderID/getRiderTripHistory', auth_1.checkAuthorization, getRiderTripHistory);
-router.get('/:driverID/getDriverTripHistory', getDriverTripHistory);
+router.get('/:driverID/getDriverTripHistory', auth_1.checkAuthorization, getDriverTripHistory);
 module.exports = router;
