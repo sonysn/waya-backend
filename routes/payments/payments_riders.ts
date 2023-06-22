@@ -2,22 +2,23 @@ import express from 'express';
 const { deposit, validateCharge } = require('../../controllers/payments/deposit_flutterwave');
 const { depositPaystack, callbackPaystack, getBalance } = require('../../controllers/payments/deposit_paystack_riders');
 const { tranferUserstoDrivers, tranferUserstoOtherUsers, getDriverData, getUserData} = require('../../controllers/payments/transfers');
+import { checkAuthorization } from '../../controllers/auth';
 
 const router = express.Router();
 
 //paystack routes
-router.post('/charge', depositPaystack);
+router.post('/charge', checkAuthorization, depositPaystack);
 router.get('/callback', callbackPaystack);
 
 //getbalance
-router.post('/getbalance', getBalance);
+router.post('/getbalance', checkAuthorization, getBalance);
 
-router.post('/transferToDrivers', tranferUserstoDrivers);
-router.post('/transferToUsers', tranferUserstoOtherUsers );
+router.post('/transferToDrivers', checkAuthorization, tranferUserstoDrivers);
+router.post('/transferToUsers', checkAuthorization, tranferUserstoOtherUsers );
 
 //get data
-router.get('/:driverPhoneNumber/getDriverData', getDriverData);
-router.get('/:userPhoneNumber/getUserData', getUserData );
+router.get('/:driverPhoneNumber/getDriverData', checkAuthorization, getDriverData);
+router.get('/:userPhoneNumber/getUserData', checkAuthorization, getUserData );
 
 
 module.exports = router;

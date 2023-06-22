@@ -6,22 +6,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const { requestRide, getTripsHistory, searchForDrivers, driverAcceptRide, getPrice, driverCount, getCurrentRide, driverGetCurrentRides, driverOnRideComplete, onRiderCancelledRide, rateDriver, onDriverCancelledRide, getRiderTripHistory, getDriverTripHistory } = require('../../controllers/userActions/requestRide');
 const { ensureToken } = require('../../controllers/userAuth');
+const auth_1 = require("../../controllers/auth");
 const router = express_1.default.Router();
-router.post('/requestride', ensureToken, requestRide, searchForDrivers);
+router.post('/requestride', auth_1.checkAuthorization, requestRide, searchForDrivers);
 router.post('/getRidePrice', getPrice);
-router.get('/:userId/getridehistory', ensureToken, getTripsHistory);
+router.get('/:userId/getridehistory', auth_1.checkAuthorization, getTripsHistory);
 router.post('/driverAcceptRide', driverAcceptRide);
 //Ride information
 router.get('/:locationData/driverCount', driverCount);
-router.get('/:riderID/getCurrentRide', getCurrentRide);
+router.get('/:riderID/getCurrentRide', auth_1.checkAuthorization, getCurrentRide);
 router.get('/:driverID/driverGetCurrentRides', driverGetCurrentRides);
 router.post('/driverOnRideComplete', driverOnRideComplete);
 //Ride Cancellation or Ending
-router.post('/:riderID/onRiderCancelledRide', onRiderCancelledRide);
+router.post('/:riderID/onRiderCancelledRide', auth_1.checkAuthorization, onRiderCancelledRide);
 router.post('/:driverID/onDriverCancelledRide', onDriverCancelledRide);
 //Ratings
-router.post('/:riderID/rateDriver', rateDriver);
+router.post('/:riderID/rateDriver', auth_1.checkAuthorization, rateDriver);
 //Trip Histories
-router.get('/:riderID/getRiderTripHistory', getRiderTripHistory);
+router.get('/:riderID/getRiderTripHistory', auth_1.checkAuthorization, getRiderTripHistory);
 router.get('/:driverID/getDriverTripHistory', getDriverTripHistory);
 module.exports = router;
