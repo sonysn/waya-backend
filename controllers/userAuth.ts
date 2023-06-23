@@ -166,7 +166,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
             //console.log(result)
             //start
             const key = crypto.randomBytes(3);
-            const token = parseInt(key.toString('hex'), 16).toString().substring(0, 4);
+            const token = parseInt(key.toString('hex'), 16).toString().padStart(4, '0');
             //!console.log(token)
 
             let mailOptions = {
