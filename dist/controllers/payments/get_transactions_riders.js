@@ -40,7 +40,7 @@ exports.getUserToUserTransactions = (req, res) => __awaiter(void 0, void 0, void
     try {
         const userSendingID = req.params.userID;
         const data = yield transfers_1.UsersToUsers.find({ userSendingID }).exec();
-        console.log(data);
+        //console.log(data);
         res.status(200).json(data);
     }
     catch (error) {
@@ -52,7 +52,7 @@ exports.getUserToUserTransactionsForReceiver = (req, res) => __awaiter(void 0, v
     try {
         const userReceivingID = req.params.userID;
         const data = yield transfers_1.UsersToUsers.find({ userReceivingID }).exec();
-        console.log(data);
+        //console.log(data);
         res.status(200).json(data);
     }
     catch (error) {

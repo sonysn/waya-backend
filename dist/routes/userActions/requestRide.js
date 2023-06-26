@@ -11,7 +11,7 @@ const router = express_1.default.Router();
 router.post('/requestride', auth_1.checkAuthorization, requestRide, searchForDrivers);
 router.post('/getRidePrice', getPrice);
 router.get('/:userId/getridehistory', auth_1.checkAuthorization, getTripsHistory);
-router.post('/driverAcceptRide', auth_1.checkAuthorization, driverAcceptRide);
+router.post('/driverAcceptRide', driverAcceptRide);
 //Ride information
 router.get('/:locationData/driverCount', driverCount);
 router.get('/:riderID/getCurrentRide', auth_1.checkAuthorization, getCurrentRide);

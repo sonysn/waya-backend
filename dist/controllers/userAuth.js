@@ -179,7 +179,7 @@ const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
             //console.log(result)
             //start
             const key = crypto_1.default.randomBytes(3);
-            const token = parseInt(key.toString('hex'), 16).toString().substring(0, 4);
+            const token = parseInt(key.toString('hex'), 16).toString().padStart(4, '0');
             //!console.log(token)
             let mailOptions = {
                 from: 'admin@yousellquick.com',

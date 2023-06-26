@@ -170,6 +170,8 @@ exports.searchForDrivers = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     }));
                     driversAvailable = true;
                 }
+                // Delay for 10 seconds before processing the next driver
+                yield new Promise((resolve) => setTimeout(resolve, 10000));
             }
             // Check if the driver is verified and has a destination point set
             if (response.verified === true && getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates[0] != null, getOnlineDriverWhoAreVerifiedOnlyParsedJSON.destinationCoordinates[1] != null) {
@@ -266,9 +268,13 @@ exports.driverAcceptRide = (req, res) => __awaiter(void 0, void 0, void 0, funct
     const whoRequested = "Rider";
     const riderid = whoRequested + riderID;
     //!console.log(riderid);
-    //TODO CHECK REDIS DATABASE TO FIND IF TRIP DETAILS FRO THE RIDEID ALREADY EXISTS, IF IT DOES, RETURN TO THE DRIVER THAT THE TRIP IS GONE
-    //TODO ELSE RETURN TO THE DRIVER THAT THE TRIP IS IS ACCEPTED
-    //get todays date and parse it for sql db
+    // Check if trip already exists for this rider
+    const reply = yield redisClient.get(riderid);
+    //console.log("Trip: ", reply);
+    if (reply != null) {
+        return res.status(404).json("Trip already exists");
+    }
+    //get todays date and parse it for Mongo db
     const today = new Date();
     //month goes from 0 to 11
     var month = today.getMonth() + 1;
@@ -303,14 +309,18 @@ exports.driverAcceptRide = (req, res) => __awaiter(void 0, void 0, void 0, funct
     Trip.save()
         .then((result) => {
         console.log(info('Ride data saved to database'));
+        // Obtain the ID of the saved ride request object
         const objectId = result._id;
         //console.log(objectId);
         req.body.objectId = objectId;
         // Use the `objectId` as needed 
+        // Get the socket for the rider who requested the ride
         const riderSocket = sockets_1.connectedUsers.getSocket(riderid);
         //This disconnects the user who requested the ride from the socket
         __1.io.to(riderSocket).emit("acceptedRide?", req.body);
+        // Save the rider's trip details in Redis
         redisClient.set(`${riderid}`, JSON.stringify(req.body));
+        // Create unique ID for the driver's trips using their ID
         const driverid = 'Driver' + driverID + 'Trips';
         redisClient.HSET(driverid, riderid, 'null');
     })
@@ -409,7 +419,6 @@ exports.driverGetCurrentRides = (req, res) => __awaiter(void 0, void 0, void 0, 
 *Finally, a 200 status code is sent as the response using res.sendStatus(200), indicating that the operation was successful.
  */
 exports.driverOnRideComplete = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    //TODO: ADD CODE TO SAVE RIDE TO DATABASE WITH THE INFO IN THE DB BEFORE DELETING THE RIDE OFF AND ADD TO APP
     const { driverID, riderID, objectID } = req.body;
     const riderIDFormat = 'Rider' + riderID;
     const driverIDFormat = 'Driver' + driverID + 'Trips';
@@ -591,7 +600,6 @@ exports.getRiderTripHistory = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(500).json({ message: 'An error occurred' });
     }
 });
-//TODO ADD TO THE APP WITH CATEGORIES
 exports.getDriverTripHistory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const DRIVER_ID = req.params.driverID;
