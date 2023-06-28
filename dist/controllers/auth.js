@@ -18,7 +18,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const checkAuthorization = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const bearerHeader = req.headers["authorization"];
     if (!bearerHeader) {
-        console.log("no token");
+        //console.log("no token");
         res.sendStatus(403);
         return;
     }
@@ -26,7 +26,7 @@ const checkAuthorization = (req, res, next) => __awaiter(void 0, void 0, void 0,
     req.body.token = bearerToken;
     try {
         jsonwebtoken_1.default.verify(req.body.token, process.env.JWT_SECRET);
-        console.log("token verified");
+        //console.log("token verified");
         next();
     }
     catch (err) {

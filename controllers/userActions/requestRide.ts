@@ -275,6 +275,9 @@ exports.searchForDrivers = async (req: Request, res: Response) => {
           });
 
           driversAvailable = true;
+
+          // Delay for 10 seconds before processing the next driver
+          await new Promise((resolve) => setTimeout(resolve, 10000));
         }
       }
     }
@@ -338,7 +341,7 @@ exports.driverAcceptRide = async (req: Request, res: Response) => {
   // Check if trip already exists for this rider
   const reply = await redisClient.get(riderid);
   //console.log("Trip: ", reply);
-  if(reply != null) {
+  if (reply != null) {
     return res.status(404).json("Trip already exists");
   }
 

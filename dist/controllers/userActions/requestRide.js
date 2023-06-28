@@ -219,6 +219,8 @@ exports.searchForDrivers = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         __1.io.to(driversocket).emit("ridenotifications", req.body);
                     }));
                     driversAvailable = true;
+                    // Delay for 10 seconds before processing the next driver
+                    yield new Promise((resolve) => setTimeout(resolve, 10000));
                 }
             }
         }
