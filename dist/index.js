@@ -63,6 +63,7 @@ const depositRoutes = require('./routes/payments/payments_driver');
 const depositRoutes2 = require('./routes/payments/payments_riders');
 const getDriverTransactionsRoutes = require('./routes/payments/get_transactions_driver');
 const getRiderTransactionRoutes = require('./routes/payments/get_transactions_rider');
+const notificationsRoutes = require('./routes/notifications');
 //middleware
 app.set('sockets', (0, sockets_1.sockets)());
 app.use((0, morgan_1.default)('dev'));
@@ -76,6 +77,7 @@ app.use('/', depositRoutes);
 app.use('/', depositRoutes2);
 app.use('/', getDriverTransactionsRoutes);
 app.use('/', getRiderTransactionRoutes);
+app.use('/', notificationsRoutes);
 app.get('/', (req, res) => {
     res.json({ info: 'Welcome to Waya' });
 });
