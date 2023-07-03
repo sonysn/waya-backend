@@ -13,4 +13,7 @@ router.get('/driver-notifications', notifications_1.getDriverNotifications);
 //Define the route for writing user notifications
 router.post('/write-user-notifications', notifications_1.writeUserNotifications);
 router.post('/write-driver-notifications', notifications_1.writeDriverNotifications);
+//Define the route for deleting user notifications
+router.delete('/delete-user-notifications', notifications_1.deleteUserNotifications);
+router.delete('/delete-driver-notifications', notifications_1.deleteDriverNotifications);
 module.exports = router;

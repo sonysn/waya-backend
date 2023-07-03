@@ -12,12 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.writeDriverNotifications = exports.getDriverNotifications = exports.writeUserNotifications = exports.getUserNotifications = void 0;
+exports.deleteDriverNotifications = exports.writeDriverNotifications = exports.getDriverNotifications = exports.deleteUserNotifications = exports.writeUserNotifications = exports.getUserNotifications = void 0;
 const notifications_1 = require("../models/notifications");
 const ansi_colors_config_1 = require("../ansi-colors-config");
 const mysql_config_1 = require("../databases/mysql_config");
 const firebase_admin_1 = __importDefault(require("firebase-admin"));
-const getUserNotifications = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+//!USER NOTIFICATIONS
+const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield notifications_1.UserNotifications.find().exec();
         res.status(200).json(data);
@@ -28,7 +29,7 @@ const getUserNotifications = (req, res, next) => __awaiter(void 0, void 0, void 
     }
 });
 exports.getUserNotifications = getUserNotifications;
-const writeUserNotifications = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const writeUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { Title, Message } = req.body;
     const parsedData = {
         Title: Title,
@@ -49,13 +50,21 @@ const writeUserNotifications = (req, res, next) => __awaiter(void 0, void 0, voi
             console.log(tokens.length);
             for (let i = 0; i < tokens.length; i++) {
                 sendNotifications(tokens[i], Title, Message);
+                //console.log(tokens[i]);
             }
             res.sendStatus(200);
         }
     });
 });
 exports.writeUserNotifications = writeUserNotifications;
-const getDriverNotifications = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const deleteUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { objectId } = req.body;
+    yield notifications_1.UserNotifications.deleteOne({ _id: objectId });
+    res.sendStatus(200);
+});
+exports.deleteUserNotifications = deleteUserNotifications;
+//!DRIVER NOTIFICATIONS
+const getDriverNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield notifications_1.DriverNotifications.find().exec();
         res.status(200).json(data);
@@ -66,7 +75,7 @@ const getDriverNotifications = (req, res, next) => __awaiter(void 0, void 0, voi
     }
 });
 exports.getDriverNotifications = getDriverNotifications;
-const writeDriverNotifications = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const writeDriverNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { Title, Message } = req.body;
     const parsedData = {
         Title: Title,
@@ -93,6 +102,12 @@ const writeDriverNotifications = (req, res, next) => __awaiter(void 0, void 0, v
     });
 });
 exports.writeDriverNotifications = writeDriverNotifications;
+const deleteDriverNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { objectId } = req.body;
+    yield notifications_1.DriverNotifications.deleteOne({ _id: objectId });
+    res.sendStatus(200);
+});
+exports.deleteDriverNotifications = deleteDriverNotifications;
 /**
  * Sends notifications to the specified device registration tokens.
  * @param tokens - Device registration token.
@@ -111,7 +126,7 @@ function sendNotifications(tokens, title, message) {
         };
         // Send the notifications to the specified tokens
         try {
-            firebase_admin_1.default.messaging().send(payload);
+            yield firebase_admin_1.default.messaging().send(payload);
         }
         catch (error) {
             console.error('Error sending notifications:', error);

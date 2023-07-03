@@ -40,12 +40,20 @@ export const writeUserNotifications = async (req: Request, res: Response) => {
             console.log(tokens.length);
             for (let i = 0; i < tokens.length; i++) {
                 sendNotifications(tokens[i], Title, Message);
+                //console.log(tokens[i]);
             }
 
 
             res.sendStatus(200);
         }
     });
+}
+
+export const deleteUserNotifications = async (req: Request, res: Response) => {
+    const { objectId } = req.body;
+
+    await UserNotifications.deleteOne({ _id: objectId });
+    res.sendStatus(200);
 }
 
 
@@ -92,6 +100,13 @@ export const writeDriverNotifications = async (req: Request, res: Response) => {
     });
 }
 
+export const deleteDriverNotifications = async (req: Request, res: Response) => {
+    const { objectId } = req.body;
+
+    await DriverNotifications.deleteOne({ _id: objectId });
+    res.sendStatus(200);
+}
+
 /**
  * Sends notifications to the specified device registration tokens.
  * @param tokens - Device registration token.
@@ -110,7 +125,7 @@ async function sendNotifications(tokens: string, title: string, message: string)
 
     // Send the notifications to the specified tokens
     try {
-        admin.messaging().send(payload);
+        await admin.messaging().send(payload);
     } catch (error) {
         console.error('Error sending notifications:', error);
     }
