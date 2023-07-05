@@ -23,9 +23,9 @@ const checkAuthorization = (req, res, next) => __awaiter(void 0, void 0, void 0,
         return;
     }
     const bearerToken = bearerHeader.split(" ")[1];
-    req.body.token = bearerToken;
+    // req.body.token = bearerToken;
     try {
-        jsonwebtoken_1.default.verify(req.body.token, process.env.JWT_SECRET);
+        jsonwebtoken_1.default.verify(bearerToken, process.env.JWT_SECRET);
         //console.log("token verified");
         next();
     }
