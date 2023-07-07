@@ -2,19 +2,27 @@ import { Request, Response, NextFunction } from "express";
 import { warning, info, errormessage } from '../../ansi-colors-config';
 import { imagekit } from '../../databases/imagekit_config';
 import { MySQLConnection } from "../../databases/mysql_config";
-import FormData from 'form-data';
+
+interface File {
+    buffer: Buffer;
+    originalname: string;
+    encoding: string;
+    mimetype: string;
+}
 
 // Define an async function called 'uploadStructure' that takes in two arguments:
 // 'fileinfo' which is an object with buffer and originalname properties, and 'folderD' which is a string.
-const uploadStructure = async function (fileinfo: { buffer: Buffer, originalname: string }): Promise<string> {
+const uploadStructure = async function (fileinfo: File, imageName: string): Promise<string> {
     try {
-        console.log(String(fileinfo.originalname));
-        const buffer = Buffer.from(fileinfo.buffer);
+        // console.log(String(fileinfo.originalname));
+        // const buffer = Buffer.from(fileinfo.buffer);
+        
         // Await the result of the imagekit.upload() function, passing in an object with the file buffer, file name, and folder path.
         const resp = await imagekit.upload({
-            file: buffer.toString(),
-            fileName: fileinfo.originalname,
-            folder: `/riderProfilePictures`
+            file: fileinfo.buffer,
+            fileName: imageName,
+            folder: `/riderProfilePictures`,
+            useUniqueFileName: false
         });
         // Return the URL of the uploaded file.
         return resp.url;
@@ -24,34 +32,37 @@ const uploadStructure = async function (fileinfo: { buffer: Buffer, originalname
         return '';
     }
 }
-
+// Refactored function to upload a profile picture
 export const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        var form = new FormData();
-
+        // Extract userID from the request body
         const { userID } = req.body;
-        console.log(req.files)
+
+        // Generate the user identifier based on the userID
+        const user = `USER${userID}`;
+
+        // console.log(req.files)
         // console.log(req.files.profilePhoto[0])
 
-        var profilePhotoLink: string;
-        
-        // form.append('profilePhoto', req.files['profilePhoto'][0].buffer, {
-        //     filename: req.body.files['profilePhoto'][0].originalname,
-        //     contentType: req.body.files['profilePhoto'][0].mimetype
-        //   });
-      
-        const profilePhotoData: any = req.files.profilePhoto[0];
+        // Get the profile photo data from the request files
+        const profilePhotoData: File = (req.files as { [fieldname: string]: File[]; }).profilePhoto[0];
 
-        profilePhotoLink = await uploadStructure(profilePhotoData);
+        // Upload the profile photo and get the link
+        const profilePhotoLink = await uploadStructure(profilePhotoData, user);
 
-        const SQLCOMMAND = `UPDATE users SET PROFILE_PHOTO = ? WHERE ID = ?;`;
+        // Update the users table with the new profile photo
+        const SQL_COMMAND = `UPDATE users SET PROFILE_PHOTO = ? WHERE ID = ?;`;
+        MySQLConnection.query(SQL_COMMAND, [profilePhotoLink, userID], (err, result) => {
+            if (err) {
+                // If there is an error, send internal server error status
+                res.sendStatus(500);
+            }
+        });
 
-        MySQLConnection.query(SQLCOMMAND, [profilePhotoLink, userID], (err, result) => {
-            if (err) res.sendStatus(500);
-        })
-
+        // Send success status
         res.sendStatus(200);
     } catch (error) {
+        // If there is an error, log the error message and send internal server error status
         console.log(errormessage(`${error}`));
         res.sendStatus(500);
     }
