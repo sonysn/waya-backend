@@ -13,10 +13,10 @@ export const checkAuthorization = async (req: Request, res: Response, next: Next
   }
 
   const bearerToken = bearerHeader.split(" ")[1];
-  req.body.token = bearerToken;
+  // req.body.token = bearerToken;
 
   try {
-    jsonwebtoken.verify(req.body.token, process.env.JWT_SECRET as string);
+    jsonwebtoken.verify(bearerToken, process.env.JWT_SECRET as string);
     //console.log("token verified");
     next();
   } catch (err) {
