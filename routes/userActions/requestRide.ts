@@ -5,6 +5,10 @@ const { requestRide, getTripsHistory, searchForDrivers, driverAcceptRide, getPri
 import { uploadProfilePicture } from '../../controllers/userActions/updateProfilePic'
 const { ensureToken } = require('../../controllers/userAuth');
 import { checkAuthorization } from '../../controllers/auth';
+const { upload } = require('../../databases/upload_config');
+const multer = require('multer');
+const uploader = multer().single('profilePhoto');
+
 
 const router = express.Router();
 
@@ -31,6 +35,6 @@ router.get('/:riderID/getRiderTripHistory', checkAuthorization, getRiderTripHist
 router.get('/:driverID/getDriverTripHistory', checkAuthorization, getDriverTripHistory);
 
 //!upload profile picture route
-router.post('/userUploadProfilePicture', checkAuthorization, uploadProfilePicture);
+router.post('/userUploadProfilePicture', checkAuthorization, upload.fields([{ name: 'profilePhoto' }, { name: 'userID' }]), uploadProfilePicture);
 
 module.exports = router;
