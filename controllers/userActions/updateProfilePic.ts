@@ -29,7 +29,7 @@ const uploadStructure = async function (fileinfo: File, imageName: string): Prom
     } catch (error) {
         // If an error occurs, log the error message and return an empty string.
         console.log(error);
-        return '';
+        return '[NULL]';
     }
 }
 // Refactored function to upload a profile picture

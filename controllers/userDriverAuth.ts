@@ -34,13 +34,21 @@ export const validateSignUp = async (req: Request, res: Response, next: NextFunc
     })
 }
 
+/*Image Data Passed into this Interface*/
+interface File {
+    buffer: Buffer;
+    originalname: string;
+    encoding: string;
+    mimetype: string;
+}
+
 // Define an async function called 'uploadStructure' that takes in two arguments:
 // 'fileinfo' which is an object with buffer and originalname properties, and 'folderD' which is a string.
-const uploadStructure = async function (fileinfo: { buffer: Buffer, originalname: string }, folderD: string): Promise<string> {
+const uploadStructure = async function (fileinfo: File, folderD: string): Promise<string> {
     try {
         // Await the result of the imagekit.upload() function, passing in an object with the file buffer, file name, and folder path.
         const resp = await imagekit.upload({
-            file: fileinfo.buffer.toString(),
+            file: fileinfo.buffer,
             fileName: fileinfo.originalname,
             folder: `/driverfiles/${folderD}`
         });
@@ -68,9 +76,9 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
         var driversLicenseLink: string;
         var vehicleInsuranceLink: string;
 
-        const profilePhotoData: any = req.body.files['profilePhoto'][0];
-        const driversLicenseData: any = req.body.files['driversLicense'][0];
-        const vehicleInsuranceData: any = req.body.files['vehicleInsurance'][0];
+        const profilePhotoData: File = (req.files as { [fieldname: string]: File[]; }).profilePhoto[0];
+        const driversLicenseData: File = (req.files as { [fieldname: string]: File[]; }).driversLicense[0];
+        const vehicleInsuranceData: File = (req.files as { [fieldname: string]: File[]; }).vehicleInsurance[0];
 
         //date parse
         const today = new Date();

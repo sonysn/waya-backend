@@ -53,7 +53,7 @@ const uploadStructure = function (fileinfo, folderD) {
         try {
             // Await the result of the imagekit.upload() function, passing in an object with the file buffer, file name, and folder path.
             const resp = yield imagekit_config_1.imagekit.upload({
-                file: fileinfo.buffer.toString(),
+                file: fileinfo.buffer,
                 fileName: fileinfo.originalname,
                 folder: `/driverfiles/${folderD}`
             });
@@ -78,9 +78,9 @@ const signup = (req, res, next) => __awaiter(void 0, void 0, void 0, function* (
         var profilePhotoLink;
         var driversLicenseLink;
         var vehicleInsuranceLink;
-        const profilePhotoData = req.body.files['profilePhoto'][0];
-        const driversLicenseData = req.body.files['driversLicense'][0];
-        const vehicleInsuranceData = req.body.files['vehicleInsurance'][0];
+        const profilePhotoData = req.files.profilePhoto[0];
+        const driversLicenseData = req.files.driversLicense[0];
+        const vehicleInsuranceData = req.files.vehicleInsurance[0];
         //date parse
         const today = new Date();
         var month = today.getMonth() + 1;

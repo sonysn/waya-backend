@@ -33,7 +33,7 @@ const uploadStructure = function (fileinfo, imageName) {
         catch (error) {
             // If an error occurs, log the error message and return an empty string.
             console.log(error);
-            return '';
+            return '[NULL]';
         }
     });
 };
